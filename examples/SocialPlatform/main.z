@@ -1,0 +1,41 @@
+next SocialWeb {
+    Routes {
+        home
+        profile
+        feed
+        messages
+        explore
+        settings
+    }
+
+    API {
+        auth
+        users
+        posts
+        messages
+        notifications
+    }
+
+    Components {
+        PostCard
+        UserProfile
+        MessageThread
+        NotificationBell
+        SearchBar
+    }
+}
+
+swift SocialMobile {
+    App {
+        TabView
+        NavigationView
+    }
+
+    Components {
+        FeedView
+        ProfileView
+        MessagesView
+        CameraView
+        SettingsView
+    }
+}

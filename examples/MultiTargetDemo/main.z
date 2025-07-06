@@ -1,0 +1,59 @@
+next WebApp {
+    Routes {
+        home
+        dashboard
+        api
+    }
+
+    Components {
+        Header
+        Sidebar
+        DataTable
+    }
+}
+
+nothing MyNothing {
+    lo que sea
+}
+
+swift MobileApp {
+    App {
+        ContentView
+        TabView
+    }
+
+    Components {
+        LoginView
+        DashboardView
+    }
+}
+
+rust BackendAPI {
+    type User {
+        id: String
+        email: String
+        role: String
+    }
+
+    fun authenticate_user() {
+        // Authentication logic
+    }
+
+    mod database {
+        // Database operations
+    }
+}
+
+tauri DesktopApp {
+    Frontend {
+        Dashboard
+        Settings
+        FileManager
+    }
+
+    Backend {
+        FileSystem
+        Database
+        Sync
+    }
+}

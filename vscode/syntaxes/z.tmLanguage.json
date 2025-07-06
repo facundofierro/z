@@ -1,0 +1,97 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Z Language",
+  "scopeName": "source.z",
+  "patterns": [
+    { "include": "#comments" },
+    { "include": "#strings" },
+    { "include": "#numbers" },
+    { "include": "#annotations" },
+    { "include": "#keywords" },
+    { "include": "#elements" },
+    { "include": "#modifiers" }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        {
+          "name": "comment.line.double-slash.z",
+          "match": "//.*$"
+        }
+      ]
+    },
+    "strings": {
+      "patterns": [
+        {
+          "name": "string.quoted.single.z",
+          "begin": "'",
+          "end": "'",
+          "patterns": [
+            {
+              "match": "\\.'",
+              "name": "constant.character.escape.z"
+            }
+          ]
+        }
+      ]
+    },
+    "numbers": {
+      "patterns": [
+        {
+          "name": "constant.numeric.z",
+          "match": "\\b[0-9]+(\\.[0-9]+)?\\b"
+        }
+      ]
+    },
+    "annotations": {
+      "patterns": [
+        {
+          "name": "entity.name.annotation.z",
+          "match": "@[_A-Za-z][_A-Za-z0-9]*"
+        }
+      ]
+    },
+    "keywords": {
+      "patterns": [
+        {
+          "name": "keyword.control.z",
+          "match": "\\b(if|else|for|in)\\b"
+        },
+        {
+          "name": "storage.type.function.z",
+          "match": "\\bfun\\b"
+        },
+        {
+          "name": "keyword.other.target.z",
+          "match": "\\b(next|swift|rust|tauri|android|harmony|qt|java|python|bash)\\b"
+        },
+        {
+          "name": "entity.name.type.namespace.z",
+          "match": "\\b(Routes|API|Components|Schema|App|Activities|Services|Pages|Windows|Frontend|Backend|Config)\\b"
+        }
+      ]
+    },
+    "elements": {
+      "patterns": [
+        {
+          "name": "entity.name.type.target.z",
+          "match": "\\b(next|swift|rust|tauri|android|harmony|qt|java|python|bash)\\b(?=\\s*(\\(|{))"
+        },
+        {
+          "name": "entity.name.type.element.z",
+          "match": "^[A-Z][A-Za-z0-9_]*\\b(?=\\s*(\\(|{))"
+        }
+      ]
+    },
+    "modifiers": {
+      "patterns": [
+        {
+          "name": "storage.modifier.z",
+          "match": "^(\\s*)[a-z][A-Za-z0-9_]*\\b(?=\\s+[A-Z][A-Za-z0-9_]*)"
+        }
+      ]
+    }
+  },
+  "fileTypes": ["z"],
+  "uuid": "3e4c44b4-8f78-4d53-9b96-123456789abc"
+}

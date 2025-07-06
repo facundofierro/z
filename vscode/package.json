@@ -1,0 +1,85 @@
+{
+  "name": "z-language",
+  "displayName": "Z Language Support",
+  "description": "Language support for the Z meta-programming language with multi-target compilation",
+  "version": "0.1.2",
+  "publisher": "z-language",
+  "engines": {
+    "vscode": "^1.74.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Language Packs"
+  ],
+  "keywords": [
+    "z-language",
+    "meta-programming",
+    "multi-target",
+    "nextjs",
+    "swiftui",
+    "rust",
+    "tauri"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "z",
+        "aliases": [
+          "Z Language",
+          "z"
+        ],
+        "extensions": [
+          ".z"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "z",
+        "scopeName": "source.z",
+        "path": "./syntaxes/z.tmLanguage.json"
+      }
+    ],
+    "configuration": {
+      "type": "object",
+      "title": "Z Language",
+      "properties": {
+        "z-language.server.path": {
+          "type": "string",
+          "default": "",
+          "description": "Path to the Z Language Server executable. Leave empty to use bundled server."
+        },
+        "z-language.trace.server": {
+          "type": "string",
+          "enum": [
+            "off",
+            "messages",
+            "verbose"
+          ],
+          "default": "off",
+          "description": "Traces the communication between VS Code and the language server."
+        }
+      }
+    }
+  },
+  "activationEvents": [
+    "onLanguage:z"
+  ],
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.74.0",
+    "@types/node": "16.x",
+    "typescript": "^4.9.4",
+    "vsce": "^2.15.0"
+  },
+  "dependencies": {
+    "vscode-languageclient": "^8.1.0"
+  }
+}

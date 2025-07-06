@@ -1,0 +1,9 @@
+[package]
+name = "z-compiler-core"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+z-ast = { path = "../ast" }
+z-parser = { path = "../parser" }
+serde_json = "1.0"
