@@ -1,3 +1,40 @@
 out/
-target/
 
+# Cargo (Rust)
+target/
+**/*.rs.bk
+*.pdb
+
+# Next.js
+.next/
+node_modules/
+.vercel/
+.env*.local
+*.tsbuildinfo
+next-env.d.ts
+
+# Swift
+.build/
+.swiftpm/
+DerivedData/
+*.xcworkspace
+*.xcuserdata
+*.xcuserdatad/
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# Tauri
+src-tauri/target/
+.tauri/
+dist/
+build/
+
+# General
+.DS_Store
+.env
+.vscode/
+*.log
+*.tmp
+*.temp
