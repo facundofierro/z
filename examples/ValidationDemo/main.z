@@ -1,0 +1,105 @@
+// Z Language Validation Demo
+// This file demonstrates the enhanced context-aware validation
+
+// ✅ Valid: Next.js app with correct namespaces
+next WebApp {
+    Routes {
+        home
+        dashboard
+        api
+    }
+
+    Components {
+        Header
+        Sidebar
+        DataTable
+    }
+
+    Schema {
+        User
+        Post
+    }
+
+    API {
+        auth
+        users
+    }
+}
+
+// ✅ Valid: Swift app with correct namespaces
+swift MobileApp {
+    App {
+        ContentView
+        TabView
+    }
+
+    Components {
+        LoginView
+        DashboardView
+    }
+}
+
+// ✅ Valid: Tauri app with correct namespaces
+tauri DesktopApp {
+    Frontend {
+        Dashboard
+        Settings
+    }
+
+    Backend {
+        Database
+        API
+    }
+
+    Config {
+        permissions
+    }
+}
+
+// ❌ Invalid: Using App namespace in Next.js (should only be in Swift)
+next BadApp {
+    App {
+        MainView
+    }
+}
+
+// ❌ Invalid: Using Routes namespace in Swift (should only be in Next.js)
+swift BadMobileApp {
+    Routes {
+        home
+    }
+}
+
+// ❌ Invalid: Using Frontend namespace in Next.js (should only be in Tauri)
+next AnotherBadApp {
+    Frontend {
+        Dashboard
+    }
+}
+
+// ❌ Invalid: App name with spaces
+next "My App" {
+    Routes {
+        home
+    }
+}
+
+// ❌ Invalid: Unknown target
+nothing MyCosa {
+    SomeNamespace {
+        content
+    }
+}
+
+// ❌ Invalid: Using namespace as root target
+Routes MyRoutes {
+    home
+    dashboard
+}
+
+// ❌ Invalid: Unknown namespace
+next TestApp {
+    InvalidNamespace {
+        content
+    }
+}

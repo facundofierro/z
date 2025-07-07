@@ -1,0 +1,306 @@
+{
+    "version": "0.1.0",
+    "description": "Z Language Registry - defines all valid keywords and their validation rules",
+
+    "rootElements": {
+        "workspace": {
+            "description": "Groups multiple related applications",
+            "mode": "markup",
+            "allowedChildren": [
+                "next",
+                "swift",
+                "rust",
+                "tauri",
+                "android",
+                "harmony",
+                "qt",
+                "java",
+                "python",
+                "bash"
+            ],
+            "syntax": "workspace identifier { targets... }",
+            "compiler": "@z-compiler/workspace"
+        }
+    },
+
+    "targets": {
+        "next": {
+            "description": "React-based web applications with Next.js",
+            "mode": "markup",
+            "allowedChildren": ["Routes", "API", "Components", "Schema"],
+            "canBeRootElement": true,
+            "syntax": "next AppName { namespaces... }",
+            "defaultPackages": {
+                "next": "^14.0.0",
+                "react": "^18.0.0",
+                "@types/react": "^18.0.0",
+                "typescript": "^5.0.0",
+                "tailwindcss": "^3.0.0"
+            },
+            "compiler": "@z-compiler/nextjs"
+        },
+        "swift": {
+            "description": "iOS/macOS applications with SwiftUI",
+            "mode": "markup",
+            "allowedChildren": ["App", "Components"],
+            "canBeRootElement": true,
+            "syntax": "swift AppName { namespaces... }",
+            "defaultPackages": {},
+            "compiler": "@z-compiler/swiftui"
+        },
+        "rust": {
+            "description": "Native Rust applications or WebAssembly modules",
+            "mode": "code",
+            "allowedChildren": ["type", "fun", "mod"],
+            "canBeRootElement": true,
+            "syntax": "rust AppName { code... }",
+            "defaultPackages": {
+                "serde": "1.0",
+                "wasm-bindgen": "0.2"
+            },
+            "compiler": "@z-compiler/rust"
+        },
+        "tauri": {
+            "description": "Cross-platform desktop apps with web frontend",
+            "mode": "markup",
+            "allowedChildren": ["Frontend", "Backend", "Config"],
+            "canBeRootElement": true,
+            "syntax": "tauri AppName { namespaces... }",
+            "defaultPackages": {
+                "@tauri-apps/api": "^1.0.0",
+                "@tauri-apps/cli": "^1.0.0"
+            },
+            "compiler": "@z-compiler/tauri"
+        },
+        "android": {
+            "description": "Android applications with Kotlin/Java",
+            "mode": "markup",
+            "allowedChildren": ["Activities", "Services", "Components"],
+            "canBeRootElement": true,
+            "syntax": "android AppName { namespaces... }",
+            "defaultPackages": {},
+            "compiler": "@z-compiler/android"
+        },
+        "harmony": {
+            "description": "HarmonyOS applications",
+            "mode": "markup",
+            "allowedChildren": ["Pages", "Components"],
+            "canBeRootElement": true,
+            "syntax": "harmony AppName { namespaces... }",
+            "defaultPackages": {},
+            "compiler": "@z-compiler/harmony"
+        },
+        "qt": {
+            "description": "Cross-platform Qt applications",
+            "mode": "markup",
+            "allowedChildren": ["Windows", "Components"],
+            "canBeRootElement": true,
+            "syntax": "qt AppName { namespaces... }",
+            "defaultPackages": {},
+            "compiler": "@z-compiler/qt"
+        },
+        "java": {
+            "description": "Java applications",
+            "mode": "code",
+            "allowedChildren": ["class", "interface", "package"],
+            "canBeRootElement": true,
+            "syntax": "java AppName { code... }",
+            "defaultPackages": {},
+            "compiler": "@z-compiler/java"
+        },
+        "python": {
+            "description": "Python applications",
+            "mode": "code",
+            "allowedChildren": ["class", "function", "module"],
+            "canBeRootElement": true,
+            "syntax": "python AppName { code... }",
+            "defaultPackages": {},
+            "compiler": "@z-compiler/python"
+        },
+        "bash": {
+            "description": "Bash shell scripts",
+            "mode": "code",
+            "allowedChildren": ["function", "script"],
+            "canBeRootElement": true,
+            "syntax": "bash AppName { code... }",
+            "defaultPackages": {},
+            "compiler": "@z-compiler/bash"
+        }
+    },
+
+    "namespaces": {
+        "Routes": {
+            "aliasOf": "namespace",
+            "description": "Web application routing structure",
+            "mode": "markup",
+            "allowedChildren": ["*"],
+            "validIn": ["next"]
+        },
+        "API": {
+            "aliasOf": "namespace",
+            "description": "Backend API endpoints",
+            "mode": "markup",
+            "allowedChildren": ["*"],
+            "validIn": ["next"]
+        },
+        "Components": {
+            "aliasOf": "namespace",
+            "description": "Reusable UI components",
+            "mode": "markup",
+            "allowedChildren": ["component"],
+            "validIn": ["next", "swift", "android", "harmony", "qt"]
+        },
+        "Schema": {
+            "aliasOf": "element",
+            "description": "Database schema definitions",
+            "mode": "code",
+            "allowedChildren": ["model", "type"],
+            "validIn": ["next"]
+        },
+        "App": {
+            "aliasOf": "component",
+            "role": "root",
+            "description": "Application entry point",
+            "mode": "code",
+            "allowedChildren": ["component"],
+            "validIn": ["swift"]
+        },
+        "Frontend": {
+            "aliasOf": "namespace",
+            "description": "Frontend components and views",
+            "mode": "markup",
+            "allowedChildren": ["*"],
+            "validIn": ["tauri"]
+        },
+        "Backend": {
+            "aliasOf": "namespace",
+            "description": "Backend services and logic",
+            "mode": "markup",
+            "allowedChildren": ["*"],
+            "validIn": ["tauri"]
+        },
+        "Config": {
+            "aliasOf": "namespace",
+            "description": "Configuration and settings",
+            "mode": "markup",
+            "allowedChildren": ["*"],
+            "validIn": ["tauri"]
+        },
+        "Activities": {
+            "aliasOf": "namespace",
+            "description": "Android activities",
+            "mode": "markup",
+            "allowedChildren": ["*"],
+            "validIn": ["android"]
+        },
+        "Services": {
+            "aliasOf": "namespace",
+            "description": "Android services",
+            "mode": "markup",
+            "allowedChildren": ["*"],
+            "validIn": ["android"]
+        },
+        "Pages": {
+            "aliasOf": "namespace",
+            "description": "HarmonyOS pages",
+            "mode": "markup",
+            "allowedChildren": ["*"],
+            "validIn": ["harmony"]
+        },
+        "Windows": {
+            "aliasOf": "namespace",
+            "description": "Qt windows",
+            "mode": "markup",
+            "allowedChildren": ["*"],
+            "validIn": ["qt"]
+        }
+    },
+
+    "codeElements": {
+        "type": {
+            "aliasOf": "namespace",
+            "description": "Type definitions",
+            "mode": "code",
+            "allowedChildren": ["*"],
+            "validIn": ["rust"]
+        },
+        "fun": {
+            "aliasOf": "namespace",
+            "description": "Function definitions",
+            "mode": "code",
+            "allowedChildren": ["*"],
+            "validIn": ["rust"]
+        },
+        "mod": {
+            "aliasOf": "namespace",
+            "description": "Module definitions",
+            "mode": "code",
+            "allowedChildren": ["*"],
+            "validIn": ["rust"]
+        },
+        "class": {
+            "aliasOf": "namespace",
+            "description": "Class definitions",
+            "mode": "code",
+            "allowedChildren": ["*"],
+            "validIn": ["java", "python"]
+        },
+        "interface": {
+            "aliasOf": "namespace",
+            "description": "Interface definitions",
+            "mode": "code",
+            "allowedChildren": ["*"],
+            "validIn": ["java"]
+        },
+        "package": {
+            "aliasOf": "namespace",
+            "description": "Package definitions",
+            "mode": "code",
+            "allowedChildren": ["*"],
+            "validIn": ["java"]
+        },
+        "function": {
+            "aliasOf": "namespace",
+            "description": "Function definitions",
+            "mode": "code",
+            "allowedChildren": ["*"],
+            "validIn": ["python", "bash"]
+        },
+        "module": {
+            "aliasOf": "namespace",
+            "description": "Module definitions",
+            "mode": "code",
+            "allowedChildren": ["*"],
+            "validIn": ["python"]
+        },
+        "script": {
+            "aliasOf": "namespace",
+            "description": "Script definitions",
+            "mode": "code",
+            "allowedChildren": ["*"],
+            "validIn": ["bash"]
+        },
+        "model": {
+            "aliasOf": "element",
+            "description": "Database model definition",
+            "mode": "code",
+            "allowedChildren": ["field", "relation"],
+            "validIn": ["Schema"]
+        },
+        "component": {
+            "aliasOf": "element",
+            "description": "UI component definition",
+            "mode": "code",
+            "allowedChildren": ["prop", "state", "method"],
+            "validIn": ["Components"]
+        }
+    },
+
+    "validationRules": {
+        "appNamePattern": "^[a-zA-Z][a-zA-Z0-9_]*$",
+        "workspaceNamePattern": "^[a-zA-Z][a-zA-Z0-9_-]*$",
+        "elementNamePattern": "^[a-zA-Z][a-zA-Z0-9_]*$",
+        "maxNestingDepth": 10,
+        "reservedNames": ["workspace", "import", "export", "default"]
+    }
+}

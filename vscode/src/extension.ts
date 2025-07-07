@@ -16,17 +16,6 @@ let client: LanguageClient;
 export function activate(
   context: ExtensionContext
 ) {
-  // The server is implemented in Node.js
-  const serverModule =
-    context.asAbsolutePath(
-      path.join(
-        "..",
-        "lsp",
-        "dist",
-        "server.js"
-      )
-    );
-
   // Check if user has configured a custom server path
   const config =
     workspace.getConfiguration(
@@ -35,29 +24,38 @@ export function activate(
   const customServerPath =
     config.get<string>("server.path");
 
-  const serverPath =
-    customServerPath || serverModule;
+  // Default to the new z-language-server CLI
+  // First try to find it in the workspace, then fall back to global installation
+  const defaultServerPath =
+    customServerPath ||
+    path.join(
+      workspace.workspaceFolders?.[0]
+        ?.uri.fsPath || "",
+      "z-language-server",
+      "lib",
+      "cli.mjs"
+    ) ||
+    "z-language-server"; // Global installation
 
-  // The debug options for the server
-  // --inspect=6009: runs the server in Node's Inspector mode so VS Code can attach to the server for debugging
-  const debugOptions = {
-    execArgv: [
-      "--nolazy",
-      "--inspect=6009",
-    ],
-  };
-
-  // If the extension is launched in debug mode then the debug server options are used
-  // Otherwise the run options are used
+  // Server options for the new z-language-server
   const serverOptions: ServerOptions = {
     run: {
-      module: serverPath,
-      transport: TransportKind.ipc,
+      command: "node",
+      args: [
+        defaultServerPath,
+        "--stdio",
+      ],
+      transport: TransportKind.stdio,
     },
     debug: {
-      module: serverPath,
-      transport: TransportKind.ipc,
-      options: debugOptions,
+      command: "node",
+      args: [
+        defaultServerPath,
+        "--stdio",
+        "--log-level",
+        "4",
+      ],
+      transport: TransportKind.stdio,
     },
   };
 

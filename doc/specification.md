@@ -90,27 +90,190 @@ module Auth {
 
 ### 4. Zero-Config Scaffolding
 
-Automatic file and folder generation based on block structure:
+Automatic file and folder generation based on block structure and registry-defined child types:
 
-```z
-Routes {
-  admin          // → /app/admin/page.z
-  users {        // → /app/users/page.z
-    [id]         // → /app/users/[id]/page.z
-  }
-  api {
-    auth       // → /app/api/auth/route.z
+#### Registry-Driven Scaffolding
+
+The language registry defines how children are typed and how files are generated:
+
+```json
+{
+  "namespaces": {
+    "Routes": {
+      "childType": "route",
+      "childMode": "single",
+      "scaffolding": {
+        "fileExtension": ".route.z",
+        "parseMode": "code",
+        "directoryNesting": true
+      }
+    },
+    "Schema": {
+      "childMode": "multiple",
+      "scaffolding": {
+        "fileExtensions": {
+          "table": ".table.z",
+          "model": ".model.z",
+          "enum": ".enum.z"
+        },
+        "parseModes": {
+          "table": "markup",
+          "model": "markup",
+          "enum": "markup"
+        }
+      }
+    }
   }
 }
 ```
 
-**Scaffolding Rules:**
+#### Single-Type Children (childMode: "single")
 
-- 500-line file limit (auto-splits when exceeded)
-- Shared code → `/shared` directory
-- Platform-specific code → `/targets/{name}` directory
-- Generated files use `.z` extension
-- Build artifacts use target-specific extensions
+When all children are the same type, no type keywords are required:
+
+```z
+next MyApp {
+  Routes {
+    tasks        // → tasks.route.z (implicitly a route)
+    customers {  // → customers.route.z + customers/ directory
+      service1   // → customers/service1.route.z
+      service2   // → customers/service2.route.z
+    }
+  }
+}
+```
+
+**Generated Structure:**
+
+```
+/routes/
+├── tasks.route.z
+├── customers.route.z
+└── customers/
+    ├── service1.route.z
+    └── service2.route.z
+```
+
+#### Multi-Type Children (childMode: "multiple")
+
+When children can be different types, type keywords are required:
+
+```z
+Schema {
+  table User {      // → User.table.z
+    id: string @primary
+    email: string @unique
+  }
+
+  enum Status {     // → Status.enum.z
+    pending
+    active
+    inactive
+  }
+
+  index UserEmail { // → UserEmail.index.z
+    fields: ["email"]
+    unique: true
+  }
+}
+```
+
+**Generated Structure:**
+
+```
+/schema/
+├── User.table.z
+├── Status.enum.z
+└── UserEmail.index.z
+```
+
+#### Parse Mode Configuration
+
+Different file types use different parsing modes:
+
+- **code**: TypeScript-like syntax for logic and components
+- **markup**: Z markup syntax for data structures and configuration
+
+```z
+// tasks.route.z (parseMode: "code")
+@doc("Task management route")
+fun GET() {
+  return await db.task.findMany();
+}
+
+export default function TasksPage() {
+  return (
+    <div>
+      <h1>Tasks</h1>
+    </div>
+  );
+}
+```
+
+```z
+// User.table.z (parseMode: "markup")
+@doc("User table definition")
+id: string @primary @default(uuid())
+email: string @unique @max(255)
+name: string @max(100)
+createdAt: datetime @default(now())
+```
+
+#### Directory Nesting Rules
+
+**With Nesting (directoryNesting: true):**
+
+Children can have their own subdirectories and nested children:
+
+```z
+Routes {
+  admin {
+    users
+    settings
+  }
+}
+```
+
+**Generated:**
+
+```
+/routes/
+├── admin.route.z
+└── admin/
+    ├── users.route.z
+    └── settings.route.z
+```
+
+**Without Nesting (directoryNesting: false):**
+
+All children are generated as flat files:
+
+```z
+Schema {
+  table User { ... }
+  table Product { ... }
+}
+```
+
+**Generated:**
+
+```
+/schema/
+├── User.table.z
+└── Product.table.z
+```
+
+#### Scaffolding Rules
+
+1. **500-Line Limit**: Files exceeding 500 lines are automatically split
+2. **Type-Based Extensions**: File extensions include the child type (`.route.z`, `.table.z`)
+3. **Directory Organization**:
+   - Shared code → `/shared` directory
+   - Platform-specific code → `/targets/{platform}` directory
+   - Generated files use `.z` extension
+   - Build artifacts use target-specific extensions
+4. **Inline vs External Declaration**: Children can be defined inline or in separate files
+5. **Auto-Import**: Generated files automatically import dependencies
 
 ### 5. Unified Extensible Syntax
 
@@ -147,33 +310,86 @@ Routes {
 
 ## Syntax and Grammar
 
-### Basic Syntax
+> **For comprehensive syntax documentation, see [`syntax.md`](./syntax.md)**
 
-Z Language uses a TypeScript-like syntax with additional constructs:
+### TSX/TypeScript Foundation
 
-```z
-// Variables and constants
-let userName: string = "Alice"
-const MAX_RETRIES: number = 3
+Z Language is built on **TSX/TypeScript syntax** for immediate familiarity, with targeted extensions for multi-target development:
 
-// Functions
-function calculateTotal(items: Item[]): number {
-  return items.reduce((sum, item) => sum + item.price, 0)
-}
+```typescript
+// Standard TSX/TypeScript syntax works as expected
+let userName: string = "Alice";
+const MAX_RETRIES: number = 3;
 
-// Classes
+// Classes and async functions work normally
 class UserService {
   constructor(private db: Database) {}
 
-  async findUser(id: string): Promise<User | null> {
-    return await this.db.users.findUnique({ where: { id } })
+  async findUser(
+    id: string
+  ): Promise<User | null> {
+    return await this.db.users.findUnique(
+      { where: { id } }
+    );
   }
+}
+```
+
+### Key Syntax Extensions
+
+**Function Declaration with `fun` keyword:**
+
+```z
+// Z Language - cleaner annotations
+@params(items: Item[])
+@response(number)
+fun calculateTotal(items) {
+  return items.reduce((sum, item) => sum + item.price, 0)
+}
+
+// vs TypeScript
+function calculateTotal(items: Item[]): number { ... }
+```
+
+**Extended Type System (Rust-inspired types):**
+
+```z
+// Integer types
+age: u8          // 0 to 255
+count: i32       // -2^31 to 2^31-1
+bigNumber: u64   // 0 to 2^64-1
+
+// Floating point
+price: f32       // 32-bit float
+precision: f64   // 64-bit float
+
+// Other types
+currency: decimal  // high-precision decimal
+symbol: char      // single character
+
+// Type compilation behavior:
+// Z → TypeScript: All numeric types → number
+// Z → Rust: TypeScript number → i32 (default)
+```
+
+**Implicit Async/Await:**
+
+```z
+// Promises are automatically awaited by default
+fun getUser(id) {
+  return db.user.findUnique({ where: { id } })  // implicit await
+}
+
+// Control with annotations
+@sync
+fun synchronousCalculation(x, y) {
+  return x + y  // no await behavior
 }
 ```
 
 ### Block Syntax
 
-Blocks are the fundamental organizational unit:
+Blocks are the fundamental organizational unit with TSX-like markup capabilities:
 
 ```z
 // Basic block
@@ -199,6 +415,68 @@ BlockName {
   // Block content
 }
 ```
+
+### Element-Based Markup System
+
+Z extends TSX concepts to general-purpose blocks with intelligent child typing:
+
+**Single-Type Children (implicit typing):**
+
+```z
+// All children are implicitly routes
+Routes {
+  home         // → route named "home"
+  about        // → route named "about"
+  [slug]       // → dynamic route parameter
+  users {      // → nested route group
+    profile
+    settings
+  }
+}
+```
+
+**Multi-Type Children (explicit typing via keywords):**
+
+```z
+Schema(database: postgres) {
+  table User {           // 'table' keyword required
+    id: string @primary
+    email: string @unique
+  }
+
+  enum Status {          // 'enum' keyword required
+    pending
+    active
+    inactive
+  }
+
+  index UserEmailIndex { // 'index' keyword required
+    fields: ["email"]
+    unique: true
+  }
+}
+```
+
+**Component-Style Elements with Props:**
+
+```z
+HeroSection(title: "Welcome", subtitle: "Get started today")
+
+Button(size: "lg", variant: "primary") {
+  "Click me"
+}
+
+// With nested children
+Card(className: "border shadow-lg") {
+  Header { title: "Card Title" }
+  Content { text: "Card content here" }
+  Footer {
+    Button(onClick: handleClick) { "Action" }
+  }
+}
+```
+
+> **Note:** Child typing behavior is defined in the **language registry**, which specifies whether children require type keywords and what types are allowed.
 
 ### Annotation System
 
@@ -783,6 +1061,117 @@ plugin RustCompiler {
 }
 ```
 
+### File Parsing Modes
+
+The compiler uses different parsing strategies based on file extensions and child types:
+
+#### Code Mode (.route.z, .component.z, .service.z, etc.)
+
+Files with `parseMode: "code"` use TypeScript-like syntax:
+
+```z
+// users.route.z - TSX/TypeScript-like parsing
+@doc("User management route")
+@context("Handles CRUD operations for users")
+
+@params(request: Request)
+@response(User[])
+fun GET(request) {
+  const { page = 1, limit = 10 } = request.query;
+  return await db.user.findMany({
+    skip: (page - 1) * limit,
+    take: limit
+  });
+}
+
+export default function UsersPage() {
+  const [users, setUsers] = useState([]);
+
+  useEffect(() => {
+    fetch('/api/users')
+      .then(res => res.json())
+      .then(setUsers);
+  }, []);
+
+  return (
+    <div className="users-page">
+      <h1>Users</h1>
+      {users.map(user => (
+        <UserCard key={user.id} user={user} />
+      ))}
+    </div>
+  );
+}
+```
+
+#### Markup Mode (.table.z, .enum.z, .config.z, etc.)
+
+Files with `parseMode: "markup"` use Z's markup syntax:
+
+```z
+// User.table.z - Markup parsing for data structures
+@doc("User table with authentication fields")
+@context("Core user entity with OAuth and profile data")
+
+id: string @primary @default(uuid())
+email: string @unique @max(255) @index
+name: string @max(100)
+avatar: string? @max(500)
+role: UserRole @default(user)
+createdAt: datetime @default(now())
+updatedAt: datetime @updatedAt
+
+// Relationships
+profile: UserProfile? @relation(fields: [id], references: [userId])
+posts: Post[] @relation("UserPosts")
+```
+
+```z
+// Status.enum.z - Markup parsing for enumerations
+@doc("Task status enumeration")
+@context("Represents the lifecycle states of a task")
+
+pending @doc("Task is created but not started")
+active @doc("Task is currently being worked on")
+completed @doc("Task has been finished")
+cancelled @doc("Task was cancelled before completion")
+```
+
+#### Parser Configuration
+
+The registry defines parsing behavior per child type:
+
+```json
+{
+  "childTypes": {
+    "route": {
+      "parseMode": "code",
+      "scaffoldingType": "tsx-like"
+    },
+    "table": {
+      "parseMode": "markup",
+      "scaffoldingType": "field-list"
+    },
+    "enum": {
+      "parseMode": "markup",
+      "scaffoldingType": "value-list"
+    },
+    "config": {
+      "parseMode": "markup",
+      "scaffoldingType": "properties-only"
+    }
+  }
+}
+```
+
+#### Scaffolding Type Behaviors
+
+**tsx-like**: Generates React/TypeScript component structure
+**field-list**: Parses field definitions with types and annotations
+**value-list**: Parses enumeration values with optional documentation
+**properties-only**: Parses key-value configuration properties
+**class-based**: Generates class-oriented code structure
+
 ### Error Handling
 
 ```z
@@ -792,6 +1181,8 @@ CompileError: {
   MissingContext: "Function 'processPayment' missing @context annotation"
   InheritanceConflict: "Child block database modifier conflicts with parent"
   FileSizeExceeded: "File 'user-service.z' exceeds 500 lines. Auto-splitting enabled."
+  InvalidParseMode: "File 'User.table.z' contains code syntax but expects markup mode"
+  UnsupportedChildType: "Child type 'custom' not defined in registry"
 }
 
 // Runtime error handling
@@ -799,6 +1190,7 @@ RuntimeError: {
   TargetGenerationFailed: "NextJS compilation failed: Missing required dependency"
   ContextValidationFailed: "AI context validation failed: Insufficient documentation"
   ScaffoldingFailed: "Failed to create directory structure: Permission denied"
+  ParseModeConflict: "File extension .table.z conflicts with code syntax"
 }
 ```
 

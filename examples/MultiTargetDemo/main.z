@@ -12,10 +12,6 @@ next WebApp {
     }
 }
 
-nothing MyNothing {
-    lo que sea
-}
-
 swift MobileApp {
     App {
         ContentView
@@ -25,22 +21,6 @@ swift MobileApp {
     Components {
         LoginView
         DashboardView
-    }
-}
-
-rust BackendAPI {
-    type User {
-        id: String
-        email: String
-        role: String
-    }
-
-    fun authenticate_user() {
-        // Authentication logic
-    }
-
-    mod database {
-        // Database operations
     }
 }
 
@@ -56,4 +36,7 @@ tauri DesktopApp {
         Database
         Sync
     }
+}
+
+rust BackendAPI {
 }

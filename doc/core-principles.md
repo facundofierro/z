@@ -364,17 +364,77 @@ Different platforms require different programming paradigms. Web development use
 
 ### The Z Solution
 
-One familiar syntax that adapts to any target platform:
+Z Language uses **TSX/TypeScript syntax as its foundation**, making it immediately familiar to web developers while adding powerful extensions for multi-target development:
 
-```z
-// Base syntax is TypeScript-like
-function calculateTax(amount: number, rate: number): number {
+#### TSX-Like Base with Key Extensions
+
+```typescript
+// Standard TSX/TypeScript - works as expected
+function calculateTax(
+  amount: number,
+  rate: number
+): number {
   return amount * rate;
 }
 
-// But extends with platform-specific features
+class UserService {
+  async findUser(
+    id: string
+  ): Promise<User | null> {
+    return await this.db.users.findUnique(
+      { where: { id } }
+    );
+  }
+}
+```
+
+#### Key Differences from TSX/TypeScript
+
+**1. Function Declaration - Uses `fun` instead of `function`**
+
+```z
+// Z Language
+@params(id: string)
+@response(User | null)
+fun getUser(id) { ... }
+
+// vs TSX/TypeScript
+function getUser(id: string): Promise<User | null> { ... }
+```
+
+**2. Extended Type System - Includes Rust primitive types**
+
+```z
+// Rust-inspired types available in Z
+age: u8          // unsigned 8-bit integer
+price: f32       // 32-bit float
+count: i64       // signed 64-bit integer
+balance: decimal // high-precision decimal
+
+// Automatic type mapping:
+// Z → TypeScript: u8 → number, String → string
+// Z → Rust: number → i32, string → String
+```
+
+**3. Implicit Async/Await**
+
+```z
+// Promises are automatically awaited
+fun getUser(id) {
+  return db.user.findUnique({ where: { id } });  // implicit await
+}
+
+// Can be controlled with annotations
+@sync
+fun synchronousFunction() { ... }
+```
+
+**4. Target-Specific Blocks & Workspace Organization**
+
+```z
+// Standalone applications
 next WebApp {
-  // React-like components
+  // React-like components with enhanced syntax
   @params({ product: Product })
   ProductCard: ({ product }) => {
     return (
@@ -399,7 +459,63 @@ swift MobileApp {
     }
   }
 }
+
+// Multi-application workspaces
+workspace ecommerce-platform {
+  @doc("Customer-facing web application")
+  next customerApp {
+    Routes { shop, cart, checkout }
+    Components { ProductCard, ShoppingCart }
+  }
+
+  @doc("High-performance payment processing")
+  rust paymentService {
+    fun processPayment(amount, method) { ... }
+    fun handleRefund(transactionId) { ... }
+  }
+
+  @doc("Mobile shopping app")
+  swift mobileApp {
+    App { ShoppingApp }
+    Components { ProductList, CartView }
+  }
+}
 ```
+
+**Workspace Benefits:**
+
+- **Shared Types**: All applications share the same type definitions
+- **Cross-References**: Services can call each other's APIs with full type safety
+- **Coordinated Building**: Build and deploy entire stack together
+- **Unified Configuration**: Shared environment variables and settings
+
+**5. Element-Based Markup System**
+
+```z
+// Single-type children (all children are routes)
+Routes {
+  tasks        // implicitly a route
+  customers    // implicitly a route
+  [slug]       // dynamic route
+}
+
+// Multi-type children (requires type keywords)
+Schema(database: postgres) {
+  table Product {     // 'table' keyword specifies child type
+    id: string @primary
+    name: string @max(100)
+  }
+
+  enum Status {       // 'enum' keyword specifies child type
+    pending
+    completed
+  }
+}
+```
+
+> **Note:** The typing system for children is defined in the **language registry**, which tells the compiler what child types are allowed and whether type keywords are required.
+
+````
 
 ### Custom Control Structures
 
@@ -435,7 +551,7 @@ Retry {
 //         Err(e) => return Err(e),
 //     }
 // }
-```
+````
 
 ### DSL Blocks
 
@@ -456,7 +572,7 @@ Docker {
 
 // Database Schema
 Schema {
-  model User {
+  table User {
     id: string @primary @default(uuid())
     email: string @unique @length(max: 255)
     name: string @length(max: 100)

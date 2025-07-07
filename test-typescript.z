@@ -1,0 +1,18 @@
+// This should use TypeScript validation
+import React from 'react';
+
+interface User {
+  id: string;
+  name: string;
+}
+
+function UserCard({ user }: { user: User }) {
+  return (
+    <div className="user-card">
+      <h3>{user.name}</h3>
+      <p>ID: {user.id}</p>
+    </div>
+  );
+}
+
+export default UserCard;

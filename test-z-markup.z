@@ -1,0 +1,14 @@
+// This should use Z markup validation
+next BlogApp {
+  Routes {
+    home
+    posts {
+      [slug]
+    }
+  }
+
+  Components {
+    Header
+    PostCard
+  }
+}

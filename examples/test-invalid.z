@@ -1,0 +1,47 @@
+// Test invalid Z syntax - should show validation errors
+
+// Invalid: unknown target
+invalidTarget InvalidApp {
+  Routes {
+    home
+  }
+}
+
+// Invalid: trying to use namespace as root element
+Routes InvalidRootNamespace {
+  home
+  about
+}
+
+// Invalid: wrong namespace in target
+next WebApp {
+  Activities {  // Should be error: Activities not allowed in next
+    MainActivity
+  }
+
+  // Valid namespace
+  Routes {
+    home
+  }
+
+  // Invalid namespace for next target
+  App {  // Should be error: App is for swift, not next
+    ContentView
+  }
+}
+
+// Invalid: malformed app name
+swift app-with-hyphens {  // Should be error: invalid app name pattern
+  App {
+    ContentView
+  }
+}
+
+// Invalid: reserved name
+workspace import {  // Should be error: 'import' is reserved
+  next TestApp {
+    Routes {
+      home
+    }
+  }
+}

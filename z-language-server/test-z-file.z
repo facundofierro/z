@@ -1,0 +1,45 @@
+next TodoApp {
+  Routes {
+    home
+    todos {
+      [id]
+    }
+  }
+
+  Schema {
+    table Todo {
+      id: string @primary
+      title: string
+      completed: boolean
+    }
+  }
+
+  API {
+    todos {
+      fun GET() {
+        return db.todo.findMany();
+      }
+    }
+  }
+
+  Components {
+    TodoList: ({ todos }) => {
+      return (
+        <div>
+          {todos.map(todo =>
+            <div key={todo.id}>
+              <span>{todo.title}</span>
+              <input
+                type="checkbox"
+                checked={todo.completed}
+                onChange={() => toggleTodo(todo.id)}
+              />
+            </div>
+          )}
+        </div>
+      );
+    }
+  }
+}
+
+// TODO: Add error handling

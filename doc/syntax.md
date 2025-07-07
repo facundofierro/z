@@ -1,8 +1,153 @@
-# Z Language – Abstract Syntax Definition
+# Z Language – Syntax Overview
 
 > **Purpose**
-> This document provides a _syntax-only_ overview of Z.
-> Where `specification.md` mixes semantics, tooling and examples, this file isolates the **grammar**, **allowed constructs**, and **structural rules** that every Z parser or editor needs to understand.
+> This document provides a comprehensive overview of Z language syntax, which is fundamentally similar to TSX/TypeScript with specific extensions and modifications for multi-target compilation.
+
+---
+
+## Overview: TSX-Like Syntax with Extensions
+
+Z language syntax is **intentionally similar to TSX/TypeScript** to leverage existing developer knowledge while adding powerful extensions for cross-platform development. The core JavaScript/TypeScript syntax remains familiar, with targeted enhancements for the unique requirements of multi-target compilation.
+
+### Key Differences from TSX/TypeScript
+
+#### 1. Function Declaration
+
+```typescript
+// TSX/TypeScript
+function getUser(id: string): Promise<User | null> { ... }
+
+// Z Language
+@params(id: string)
+@response(User | null)
+fun getUser(id) { ... }
+```
+
+#### 2. Extended Type System
+
+Z includes all Rust primitive types alongside TypeScript types:
+
+**Rust-inspired types:**
+
+- Integer types: `i8`, `i16`, `i32`, `i64`, `i128`, `u8`, `u16`, `u32`, `u64`, `u128`, `isize`, `usize`
+- Floating point: `f32`, `f64`
+- Other: `char`, `decimal`
+
+**Type compilation behavior:**
+
+- When compiling to **TypeScript**: Rust types map to TypeScript equivalents (`i32` → `number`, `String` → `string`)
+- When compiling to **Rust**: TypeScript types get default mappings (`number` → `i32`, `string` → `String`)
+
+#### 3. Target-Specific Keywords
+
+```z
+next MyWebApp {
+  Routes { ... }
+  API { ... }
+  Components { ... }
+}
+
+swift MyMobileApp {
+  App { ... }
+  Components { ... }
+}
+
+rust MyLibrary {
+  type { ... }
+  fun { ... }
+  mod { ... }
+}
+```
+
+#### 3.1. Workspace Organization
+
+For organizing multiple related applications, use `workspace`:
+
+```z
+// Standalone application
+next MyPersonalSite {}
+
+// Collection of related applications
+workspace internal-tools {
+  @doc("VPN management application")
+  tauri fpn {}
+
+  @doc("Command-line interface for VPN")
+  rust fpnCli {}
+
+  @doc("Marketing website for VPN service")
+  next fpnSite {}
+}
+
+// Real-world example
+workspace ecommerce-platform {
+  next customerApp {}
+  next adminDashboard {}
+  rust paymentService {}
+  rust inventoryService {}
+  swift mobileApp {}
+}
+```
+
+**Workspace Benefits:**
+
+- **Shared Dependencies**: Common packages and configurations
+- **Coordinated Building**: Build all applications together
+- **Cross-References**: Applications can reference each other's types and APIs
+- **Unified Deployment**: Deploy entire stack as one unit
+
+#### 4. Implicit Async/Await
+
+```z
+// Promises are automatically awaited by default
+fun getUser(id) {
+  return db.user.findUnique({ where: { id } })  // implicit await
+}
+
+// Can be controlled with annotations
+@sync
+fun synchronousFunction() { ... }
+```
+
+#### 5. Annotations on Types and Declarations
+
+```z
+@doc("User table with authentication")
+@index(["email", "created_at"])
+table User {
+  id: string @primary @default(uuid())
+  email: string @unique @max(255)
+  age: u8 @min(0) @max(150)
+}
+```
+
+#### 6. Element-Based Markup System
+
+Unlike JSX which is primarily for React components, Z uses a generalized element system:
+
+```z
+// Single-type children (all children are routes)
+Routes {
+  tasks        // implicitly a route
+  customers    // implicitly a route
+  [slug]       // dynamic route
+}
+
+// Multi-type children (requires type keywords)
+Schema(database: postgres) {
+  table Product {     // 'table' keyword specifies child
+    id: string @primary
+    name: string @max(100)
+  }
+
+  enum Status {       // 'enum' keyword specifies child type
+    pending
+    completed
+  }
+}
+```
+
+> **Note:** The typing system for children is currently defined in the **language registry**, which tells the compiler what child types are allowed for each parent element and whether type keywords are required.
 
 ---
 
@@ -12,7 +157,7 @@
 | ---------------- | ----- | ----------------------------------------------------------------- |
 | _Element_        | `{}`  | Primary unit of code & compilation. Comparable to an HTML tag.    |
 | _Annotation_     | `@`   | Metadata that modifies behaviour or provides context.             |
-| _Modifier_       | word⁺ | A _leading_ word that categorises a child (e.g. `model`).         |
+| _Modifier_       | word⁺ | A _leading_ word that categorises a child (e.g. `table`, `enum`). |
 | _Child_          | —     | Nested element or value inside a parent element.                  |
 | _Registry Entry_ | —     | Static description of an element recorded in _language registry_. |
 
@@ -116,11 +261,11 @@ Rules:
 
 ### 3.3. Z-Code Element (Code Mode)
 
-Elements such as `Schema`, `Lib`, `module`, `Rust`, `NextJS` allow **code children**:
+Elements such as `Schema`, `Lib`, `module` and target blocks allow **code children**:
 
 ```z
 Schema(database: postgres) {
-  model User {
+  table User {
     id: string  @primary  @default(uuid())
     email: string  @unique
   }
@@ -143,12 +288,12 @@ There are two orthogonal axes that define a child line:
 | Syntax                        | Meaning                              | Example                       |
 | ----------------------------- | ------------------------------------ | ----------------------------- |
 | _Bare Identifier_             | Child inherits parent element kind   | `home`                        |
-| _Modifier_ **Identifier**     | Child kind forced by modifier        | `model User`                  |
+| _Modifier_ **Identifier**     | Child kind forced by modifier        | `table User`                  |
 | _Modifier_ **Signature** `{}` | Structured child with nested content | `fun login(req, res) { ... }` |
 
 ### 4.1. Table Field (Schema-specific)
 
-When the parent element is `Schema > model`, each child line represents a **column field**:
+When the parent element is `Schema > table`, each child line represents a **column field**:
 
 ```
 field_line ::= Identifier ":" Type  Annotation*
@@ -191,7 +336,11 @@ The **Language Registry** is a JSON/toml/yaml manifest that specifies, **per ele
 {
   "Schema": {
     "mode": "code",
-    "allowedChildren": ["model"],
+    "allowedChildren": [
+      "table",
+      "enum",
+      "index"
+    ],
     "compiler": "@z-compiler/schema"
   },
   "Routes": {
@@ -208,8 +357,8 @@ Rules enforced at parse time:
 2. Child modifier must be listed in `allowedChildren` (or `"*"`).
 3. Annotations must satisfy the element's annotation schema.
 
-Target blocks (e.g., `NextJS`, `SwiftUI`, `Rust`) expose their own **namespaces**—special child elements that organise code according to the conventions of that platform.
-Examples: `Routes`, `API`, `Components` for NextJS; `App`, `Components` for SwiftUI; `Crates`, `Exports` for Rust.
+Target blocks (e.g., `next`, `swift`, `rust`) expose their own **namespaces**—special child elements that organise code according to the conventions of that platform.
+Examples: `Routes`, `API`, `Components`, `Schema` for next; `App`, `Components` for swift; `type`, `fun`, `mod` for rust.
 
 These namespaces are regular elements whose behaviour is fully described in the _language registry_. They can be:
 
@@ -220,31 +369,44 @@ These namespaces are regular elements whose behaviour is fully described in the 
 
 ```json
 {
-  "SwiftUI": {
-    "mode": "markup",
-    "allowedChildren": [
-      "App",
-      "Components"
-    ],
-    "compiler": "@z-compiler/swiftui"
+  "targets": {
+    "swift": {
+      "mode": "markup",
+      "allowedChildren": [
+        "App",
+        "Components"
+      ],
+      "compiler": "@z-compiler/swiftui"
+    },
+    "next": {
+      "mode": "markup",
+      "allowedChildren": [
+        "Routes",
+        "API",
+        "Components",
+        "Schema"
+      ],
+      "compiler": "@z-compiler/nextjs"
+    }
   },
-  "App": {
-    "aliasOf": "component", // expands to a root component under the hood
-    "role": "root"
-  },
-  "Components": {
-    "aliasOf": "namespace", // purely organisational container
-    "allowedChildren": ["component"]
-  },
-  "NextJS": {
-    "mode": "markup",
-    "allowedChildren": [
-      "Routes",
-      "API",
-      "Components",
-      "Schema"
-    ],
-    "compiler": "@z-compiler/nextjs"
+  "namespaces": {
+    "App": {
+      "aliasOf": "component",
+      "role": "root"
+    },
+    "Components": {
+      "aliasOf": "namespace",
+      "allowedChildren": ["component"]
+    },
+    "Schema": {
+      "aliasOf": "element",
+      "allowedChildren": [
+        "table",
+        "enum",
+        "index",
+        "type"
+      ]
+    }
   }
 }
 ```
@@ -255,10 +417,10 @@ Rules added:
 2. **Target-Specific Children** – A child element is valid only if it appears in the parent's `allowedChildren` list (or that list contains `"*"`).
 3. **Role Metadata** – Optional `role` hints (`"root"`, `"layout"`, etc.) help downstream generators decide file locations and import patterns.
 
-With this model the SwiftUI snippet in the specification is parsed as:
+With this model a swift target block in the specification is parsed as:
 
 ```
-SwiftUI
+swift MyApp
 └─ App (alias → component root)
    └─ WindowGroup { … }
 └─ Components (alias → namespace)
@@ -397,7 +559,7 @@ component HomePage {
 
 ```z
 Schema(database: postgres) {
-  type Product {
+  table Product {
     id: string  @primary @default(uuid())
     name: string  @max(100)
     price: number @min(0)

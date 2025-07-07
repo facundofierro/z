@@ -1,0 +1,83 @@
+// Test workspace syntax with multiple applications
+workspace ecommerce-platform {
+  next customerApp {
+    Routes {
+      home
+      products {
+        [id]
+      }
+      cart
+      checkout
+    }
+
+    Components {
+      Header
+      ProductCard
+      ShoppingCart
+    }
+
+    Schema {
+      model Product {
+        id: string @primary
+        name: string
+        price: number
+      }
+
+      model User {
+        id: string @primary
+        email: string @unique
+        orders: Order[]
+      }
+    }
+
+    API {
+      products
+      users
+      orders
+    }
+  }
+
+  swift mobileApp {
+    App {
+      ContentView
+    }
+
+    Components {
+      ProductList
+      CartView
+      UserProfile
+    }
+  }
+
+  rust paymentService {
+    mod payments {
+      fun processPayment() {}
+      fun validateCard() {}
+    }
+
+    type PaymentRequest {
+      amount: f64
+      currency: string
+      cardToken: string
+    }
+  }
+
+  tauri adminDashboard {
+    Frontend {
+      AdminPanel
+      Analytics
+      ProductManager
+    }
+
+    Backend {
+      UserService
+      ProductService
+      OrderService
+    }
+
+    Config {
+      database: postgres
+      auth: jwt
+    }
+  }
+}

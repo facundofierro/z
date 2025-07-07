@@ -1,0 +1,30 @@
+// This should trigger validation errors
+
+// Invalid target
+invalidtarget TestApp {
+  Routes {
+    home
+  }
+}
+
+// Namespace used as root target (should be error)
+Routes MainRoutes {
+  home
+  about
+}
+
+// Invalid app name with spaces
+next My App With Spaces {
+  Routes {
+    home
+  }
+}
+
+// Unknown namespace in valid target
+next ValidApp {
+  UnknownNamespace {
+    something
+  }
+}
+
+// TODO: Fix these validation errors

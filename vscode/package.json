@@ -1,9 +1,15 @@
 {
   "name": "z-language",
   "displayName": "Z Language Support",
-  "description": "Language support for the Z meta-programming language with multi-target compilation",
-  "version": "0.1.2",
+  "description": "Enterprise-grade language support for Z Language with registry-driven validation and multi-target compilation",
+  "version": "0.2.2",
   "publisher": "z-language",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/z-language/z.git",
+    "directory": "vscode"
+  },
   "engines": {
     "vscode": "^1.74.0"
   },
@@ -49,7 +55,7 @@
         "z-language.server.path": {
           "type": "string",
           "default": "",
-          "description": "Path to the Z Language Server executable. Leave empty to use bundled server."
+          "description": "Path to the Z Language Server CLI (cli.mjs). Leave empty to auto-detect from workspace or use global installation."
         },
         "z-language.trace.server": {
           "type": "string",
