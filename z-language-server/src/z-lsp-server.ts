@@ -5,10 +5,12 @@
  * You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
  */
 
-import * as lsp from "vscode-languageserver";
-import { LspServer } from "./lsp-server.js";
-import { validateZLanguageText } from "./z-validation.js";
-import { z } from "./configuration/languageIds.js";
+import * as lsp from 'vscode-languageserver';
+import { LspServer } from './lsp-server.js';
+import { validateZLanguageText } from './z-validation.js';
+import { z } from './configuration/languageIds.js';
+import { join } from 'node:path';
+import { existsSync } from 'node:fs';
 import {
     ZScaffoldingService,
     scaffoldChild,
@@ -16,23 +18,23 @@ import {
     extractParentTypeFromDocument,
     extractContextFromCursor,
     type ScaffoldingContext,
-} from "./scaffolding-commands.js";
+} from './scaffolding-commands.js';
 
 // Z Language specific commands
 export const ZCommands = {
-    SCAFFOLD_CHILD: "z.scaffoldChild",
-    CREATE_ROUTE: "z.createRoute",
-    CREATE_COMPONENT: "z.createComponent",
-    CREATE_TABLE: "z.createTable",
-    CREATE_ENUM: "z.createEnum",
-    CREATE_FROM_TEMPLATE: "z.createFromTemplate",
+    SCAFFOLD_CHILD: 'z.scaffoldChild',
+    CREATE_ROUTE: 'z.createRoute',
+    CREATE_COMPONENT: 'z.createComponent',
+    CREATE_TABLE: 'z.createTable',
+    CREATE_ENUM: 'z.createEnum',
+    CREATE_FROM_TEMPLATE: 'z.createFromTemplate',
 } as const;
 
 export class ZLspServer extends LspServer {
     private scaffoldingService = new ZScaffoldingService();
 
     async initialize(
-        params: lsp.InitializeParams
+        params: lsp.InitializeParams,
     ): Promise<lsp.InitializeResult> {
         const result = await super.initialize(params);
 
@@ -42,7 +44,7 @@ export class ZLspServer extends LspServer {
         }
 
         result.capabilities.executeCommandProvider.commands.push(
-            ...Object.values(ZCommands)
+            ...Object.values(ZCommands),
         );
 
         return result;
@@ -51,7 +53,7 @@ export class ZLspServer extends LspServer {
     async executeCommand(
         params: lsp.ExecuteCommandParams,
         token?: lsp.CancellationToken,
-        workDoneProgress?: lsp.WorkDoneProgressReporter
+        workDoneProgress?: lsp.WorkDoneProgressReporter,
     ): Promise<any> {
         const { command, arguments: args } = params;
 
@@ -62,32 +64,32 @@ export class ZLspServer extends LspServer {
 
                 case ZCommands.CREATE_ROUTE:
                     return await this.handleCreateFromTemplate(
-                        "next-route",
-                        args
+                        'next-route',
+                        args,
                     );
 
                 case ZCommands.CREATE_COMPONENT:
                     return await this.handleCreateFromTemplate(
-                        "react-component",
-                        args
+                        'react-component',
+                        args,
                     );
 
                 case ZCommands.CREATE_TABLE:
                     return await this.handleCreateFromTemplate(
-                        "table-schema",
-                        args
+                        'table-schema',
+                        args,
                     );
 
                 case ZCommands.CREATE_ENUM:
                     return await this.handleCreateFromTemplate(
-                        "enum-values",
-                        args
+                        'enum-values',
+                        args,
                     );
 
                 case ZCommands.CREATE_FROM_TEMPLATE:
                     return await this.handleCreateFromTemplate(
                         args?.[0] as string,
-                        args?.slice(1)
+                        args?.slice(1),
                     );
 
                 default:
@@ -95,7 +97,7 @@ export class ZLspServer extends LspServer {
                     return await super.executeCommand(
                         params,
                         token,
-                        workDoneProgress
+                        workDoneProgress,
                     );
             }
         } catch (error) {
@@ -106,7 +108,7 @@ export class ZLspServer extends LspServer {
 
     private async handleScaffoldChild(args?: any[]): Promise<void> {
         if (!args || args.length < 1) {
-            throw new Error("Scaffold child command requires context argument");
+            throw new Error('Scaffold child command requires context argument');
         }
 
         const context = args[0] as ScaffoldingContext;
@@ -115,11 +117,11 @@ export class ZLspServer extends LspServer {
 
     private async handleCreateFromTemplate(
         templateName: string,
-        args?: any[]
+        _args?: any[],
     ): Promise<void> {
         const workspaceRoot = this.getWorkspaceRoot();
         if (!workspaceRoot) {
-            throw new Error("No workspace found");
+            throw new Error('No workspace found');
         }
 
         await createFileFromTemplate(templateName, workspaceRoot);
@@ -136,32 +138,32 @@ export class ZLspServer extends LspServer {
         const trimmedContent = content.trim();
 
         // Skip empty files or comments-only files
-        if (!trimmedContent || trimmedContent.startsWith("//")) {
+        if (!trimmedContent || trimmedContent.startsWith('//')) {
             return false;
         }
 
         // Check for Z language target keywords at the start of file
         const zTargetKeywords = [
-            "workspace",
-            "next",
-            "swift",
-            "rust",
-            "tauri",
-            "android",
-            "harmony",
-            "qt",
-            "java",
-            "python",
-            "bash",
+            'workspace',
+            'next',
+            'swift',
+            'rust',
+            'tauri',
+            'android',
+            'harmony',
+            'qt',
+            'java',
+            'python',
+            'bash',
         ];
 
         // Remove comments and get first meaningful line
-        const lines = trimmedContent.split("\n");
-        let firstMeaningfulLine = "";
+        const lines = trimmedContent.split('\n');
+        let firstMeaningfulLine = '';
 
         for (const line of lines) {
             const trimmedLine = line.trim();
-            if (trimmedLine && !trimmedLine.startsWith("//")) {
+            if (trimmedLine && !trimmedLine.startsWith('//')) {
                 firstMeaningfulLine = trimmedLine;
                 break;
             }
@@ -180,7 +182,7 @@ export class ZLspServer extends LspServer {
 
     // Override to add content-based validation detection
     async didOpenTextDocument(
-        params: lsp.DidOpenTextDocumentParams
+        params: lsp.DidOpenTextDocumentParams,
     ): Promise<void> {
         // For Z files, detect the parsing mode based on content
         if (params.textDocument.languageId === z) {
@@ -188,7 +190,7 @@ export class ZLspServer extends LspServer {
                 // Use Z markup validation
                 await this.validateZDocument(
                     params.textDocument.uri,
-                    params.textDocument.text
+                    params.textDocument.text,
                 );
             } else {
                 // Use TypeScript validation
@@ -201,21 +203,21 @@ export class ZLspServer extends LspServer {
     }
 
     async didChangeTextDocument(
-        params: lsp.DidChangeTextDocumentParams
+        params: lsp.DidChangeTextDocumentParams,
     ): Promise<void> {
         // For Z files, detect parsing mode based on content
-        if (params.textDocument.uri.endsWith(".z")) {
+        if (params.textDocument.uri.endsWith('.z')) {
             // Get the full document text from changes
             if (params.contentChanges.length > 0) {
                 const fullChange = params.contentChanges.find(
-                    (change) => !("range" in change)
+                    (change) => !('range' in change),
                 );
                 if (fullChange) {
                     if (this.shouldUseZMarkupMode(fullChange.text)) {
                         // Use Z markup validation
                         await this.validateZDocument(
                             params.textDocument.uri,
-                            fullChange.text
+                            fullChange.text,
                         );
                     } else {
                         // Use TypeScript validation - need to let parent handle this
@@ -252,7 +254,7 @@ export class ZLspServer extends LspServer {
                     },
                     message: diagnostic.message,
                     source: diagnostic.source,
-                })
+                }),
             );
 
             // Publish the diagnostics
@@ -269,7 +271,7 @@ export class ZLspServer extends LspServer {
      * Provides scaffolding context for the current cursor position
      */
     async getScaffoldingContext(
-        params: lsp.TextDocumentPositionParams
+        params: lsp.TextDocumentPositionParams,
     ): Promise<ScaffoldingContext | null> {
         const document = this.tsClient.toOpenDocument(params.textDocument.uri);
         if (!document) {
@@ -299,5 +301,31 @@ export class ZLspServer extends LspServer {
         } as any;
 
         return extractParentTypeFromDocument(mockDocument);
+    }
+
+    /**
+     * Override didSaveTextDocument to trigger automatic scaffolding
+     */
+    didSaveTextDocument(params: lsp.DidSaveTextDocumentParams): void {
+        super.didSaveTextDocument(params);
+
+        // Check if auto-scaffolding is enabled (could be configurable)
+        const shouldAutoScaffold = this.shouldAutoScaffold(params.textDocument.uri);
+
+        if (shouldAutoScaffold) {
+            this.performAutoScaffolding(params.textDocument.uri);
+        }
+    }
+
+    private shouldAutoScaffold(uri: string): boolean {
+        // Only auto-scaffold .z files
+        return uri.endsWith('.z');
+    }
+
+    private async performAutoScaffolding(uri: string): Promise<void> {
+        // TODO: Implement automatic scaffolding on save
+        // This would require accessing private members or refactoring the base class
+        // For now, automatic scaffolding is disabled - use manual commands instead
+        console.log('Auto-scaffolding on save is not yet implemented for', uri);
     }
 }

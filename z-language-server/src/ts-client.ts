@@ -9,21 +9,21 @@
  * You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
  */
 
-import path from "node:path";
-import { URI } from "vscode-uri";
-import { ResponseError } from "vscode-languageserver";
-import type lsp from "vscode-languageserver";
-import { type DocumentUri } from "vscode-languageserver-textdocument";
+import path from 'node:path';
+import { URI } from 'vscode-uri';
+import { ResponseError } from 'vscode-languageserver';
+import type lsp from 'vscode-languageserver';
+import { type DocumentUri } from 'vscode-languageserver-textdocument';
 import {
     type CancellationToken,
     CancellationTokenSource,
-} from "vscode-jsonrpc";
-import { type LspDocument, LspDocuments } from "./document.js";
-import * as fileSchemes from "./configuration/fileSchemes.js";
-import * as languageModeIds from "./configuration/languageIds.js";
-import { CommandTypes, EventName } from "./ts-protocol.js";
-import type { TypeScriptPlugin, ts } from "./ts-protocol.js";
-import type { ILogDirectoryProvider } from "./tsServer/logDirectoryProvider.js";
+} from 'vscode-jsonrpc';
+import { type LspDocument, LspDocuments } from './document.js';
+import * as fileSchemes from './configuration/fileSchemes.js';
+import * as languageModeIds from './configuration/languageIds.js';
+import { CommandTypes, EventName } from './ts-protocol.js';
+import type { TypeScriptPlugin, ts } from './ts-protocol.js';
+import type { ILogDirectoryProvider } from './tsServer/logDirectoryProvider.js';
 import {
     AsyncTsServerRequests,
     ClientCapabilities,
@@ -34,28 +34,28 @@ import {
     ServerResponse,
     StandardTsServerRequests,
     TypeScriptRequestTypes,
-} from "./typescriptService.js";
-import { PluginManager } from "./tsServer/plugins.js";
+} from './typescriptService.js';
+import { PluginManager } from './tsServer/plugins.js';
 import type {
     ITypeScriptServer,
     TypeScriptServerExitEvent,
-} from "./tsServer/server.js";
-import { TypeScriptServerError } from "./tsServer/serverError.js";
-import { TypeScriptServerSpawner } from "./tsServer/spawner.js";
-import Tracer, { Trace } from "./tsServer/tracer.js";
+} from './tsServer/server.js';
+import { TypeScriptServerError } from './tsServer/serverError.js';
+import { TypeScriptServerSpawner } from './tsServer/spawner.js';
+import Tracer, { Trace } from './tsServer/tracer.js';
 import {
     TypeScriptVersion,
     TypeScriptVersionSource,
-} from "./tsServer/versionProvider.js";
-import type { LspClient } from "./lsp-client.js";
-import API from "./utils/api.js";
+} from './tsServer/versionProvider.js';
+import type { LspClient } from './lsp-client.js';
+import API from './utils/api.js';
 import {
     SyntaxServerConfiguration,
     TsServerLogLevel,
-} from "./utils/configuration.js";
-import { Logger, PrefixingLogger } from "./utils/logger.js";
-import type { WorkspaceFolder } from "./utils/types.js";
-import { ZipfileURI } from "./utils/uri.js";
+} from './utils/configuration.js';
+import { Logger, PrefixingLogger } from './utils/logger.js';
+import type { WorkspaceFolder } from './utils/types.js';
+import { ZipfileURI } from './utils/uri.js';
 
 interface ToCancelOnResourceChanged {
     readonly resource: string;
@@ -86,7 +86,7 @@ namespace ServerState {
              * Version reported by currently-running tsserver.
              */
             public tsserverVersion: string | undefined,
-            public languageServiceEnabled: boolean
+            public languageServiceEnabled: boolean,
         ) {}
 
         public readonly toCancelOnResourceChange =
@@ -105,7 +105,7 @@ namespace ServerState {
         readonly type = Type.Errored;
         constructor(
             public readonly error: Error,
-            public readonly tsServerLogFile: string | undefined
+            public readonly tsServerLogFile: string | undefined,
         ) {}
     }
 
@@ -119,17 +119,17 @@ export const enum DiagnosticKind {
 }
 
 export function getDignosticsKind(
-    event: ts.server.protocol.Event
+    event: ts.server.protocol.Event,
 ): DiagnosticKind {
     switch (event.event) {
-        case "syntaxDiag":
+        case 'syntaxDiag':
             return DiagnosticKind.Syntax;
-        case "semanticDiag":
+        case 'semanticDiag':
             return DiagnosticKind.Semantic;
-        case "suggestionDiag":
+        case 'suggestionDiag':
             return DiagnosticKind.Suggestion;
     }
-    throw new Error("Unknown dignostics kind");
+    throw new Error('Unknown dignostics kind');
 }
 
 class ServerInitializingIndicator {
@@ -154,7 +154,7 @@ class ServerInitializingIndicator {
         this._loadingProjectName = projectName;
         this._task = this.lspClient.createProgressReporter();
         this._task.then((reporter) =>
-            reporter.begin("Initializing JS/TS language features…")
+            reporter.begin('Initializing JS/TS language features…'),
         );
     }
 
@@ -165,8 +165,8 @@ class ServerInitializingIndicator {
     }
 }
 
-export const emptyAuthority = "ts-nul-authority";
-export const inMemoryResourcePrefix = "^";
+export const emptyAuthority = 'ts-nul-authority';
+export const inMemoryResourcePrefix = '^';
 const RE_IN_MEMORY_FILEPATH = /^\^\/([^/]+)\/([^/]*)\/(.+)$/;
 
 export interface TsClientOptions {
@@ -210,16 +210,16 @@ export class TsClient implements ITypeScriptServiceClient {
     constructor(
         onCaseInsensitiveFileSystem: boolean,
         logger: Logger,
-        lspClient: LspClient
+        lspClient: LspClient,
     ) {
         this.pluginManager = new PluginManager();
         this.documents = new LspDocuments(
             this,
             lspClient,
-            onCaseInsensitiveFileSystem
+            onCaseInsensitiveFileSystem,
         );
-        this.logger = new PrefixingLogger(logger, "[tsclient]");
-        this.tsserverLogger = new PrefixingLogger(this.logger, "[tsserver]");
+        this.logger = new PrefixingLogger(logger, '[tsclient]');
+        this.tsserverLogger = new PrefixingLogger(this.logger, '[tsserver]');
         this.lspClient = lspClient;
         this.loadingIndicator = new ServerInitializingIndicator(this.lspClient);
     }
@@ -237,7 +237,7 @@ export class TsClient implements ITypeScriptServiceClient {
     }
 
     public onDidChangeTextDocument(
-        params: lsp.DidChangeTextDocumentParams
+        params: lsp.DidChangeTextDocumentParams,
     ): void {
         this.documents.onDidChangeTextDocument(params);
     }
@@ -249,7 +249,7 @@ export class TsClient implements ITypeScriptServiceClient {
     public toTsFilePath(stringUri: string): string | undefined {
         // Vim may send `zipfile:` URIs which tsserver with Yarn v2+ hook can handle. Keep as-is.
         // Example: zipfile:///foo/bar/baz.zip::path/to/module
-        if (this.isNeovimHost && stringUri.startsWith("zipfile:")) {
+        if (this.isNeovimHost && stringUri.startsWith('zipfile:')) {
             return stringUri;
         }
 
@@ -260,25 +260,37 @@ export class TsClient implements ITypeScriptServiceClient {
         }
 
         if (resource.scheme === fileSchemes.file) {
-            return resource.fsPath;
+            let filePath = resource.fsPath;
+            // Transform .z files to .tsx for TypeScript server compatibility
+            if (filePath.endsWith('.z')) {
+                filePath = filePath.slice(0, -2) + '.tsx';
+            }
+            return filePath;
         }
 
-        return (
+        let resourcePath =
             inMemoryResourcePrefix +
-            "/" +
+            '/' +
             resource.scheme +
-            "/" +
+            '/' +
             (resource.authority || emptyAuthority) +
-            (resource.path.startsWith("/")
+            (resource.path.startsWith('/')
                 ? resource.path
-                : "/" + resource.path) +
-            (resource.fragment ? "#" + resource.fragment : "")
-        );
+                : '/' + resource.path) +
+            (resource.fragment ? '#' + resource.fragment : '')
+        ;
+
+        // Transform .z files to .tsx for TypeScript server compatibility
+        if (resourcePath.endsWith('.z')) {
+            resourcePath = resourcePath.slice(0, -2) + '.tsx';
+        }
+
+        return resourcePath;
     }
 
     public toOpenDocument(
         textDocumentUri: DocumentUri,
-        options: { suppressAlertOnFailure?: boolean } = {}
+        options: { suppressAlertOnFailure?: boolean; } = {},
     ): LspDocument | undefined {
         const filepath = this.toTsFilePath(textDocumentUri);
         const document = filepath && this.documents.get(filepath);
@@ -309,28 +321,50 @@ export class TsClient implements ITypeScriptServiceClient {
     public toResource(filepath: string): URI {
         // Yarn v2+ hooks tsserver and sends `zipfile:` URIs for Vim. Keep as-is.
         // Example: zipfile:///foo/bar/baz.zip::path/to/module
-        if (this.isNeovimHost && filepath.startsWith("zipfile:")) {
+        if (this.isNeovimHost && filepath.startsWith('zipfile:')) {
             return ZipfileURI.parse(filepath);
         }
 
         if (filepath.startsWith(inMemoryResourcePrefix)) {
             const parts = filepath.match(RE_IN_MEMORY_FILEPATH);
             if (parts) {
-                const resource = URI.parse(
-                    parts[1] +
-                        "://" +
-                        (parts[2] === emptyAuthority ? "" : parts[2]) +
-                        "/" +
-                        parts[3]
-                );
+                const resourcePath = parts[1] +
+                    '://' +
+                    (parts[2] === emptyAuthority ? '' : parts[2]) +
+                    '/' +
+                    parts[3];
+
+                // Transform .tsx files back to .z for Z language files
+                if (resourcePath.endsWith('.tsx')) {
+                    const possibleZPath = resourcePath.slice(0, -4) + '.z';
+                    const tsFilepath = this.toTsFilePath(possibleZPath);
+                    const document = tsFilepath && this.documents.get(tsFilepath);
+                    if (document) {
+                        return document.uri;
+                    }
+                }
+
+                const resource = URI.parse(resourcePath);
                 const tsFilepath = this.toTsFilePath(resource.toString());
                 const document = tsFilepath && this.documents.get(tsFilepath);
                 return document ? document.uri : resource;
             }
         }
 
+        // Transform .tsx files back to .z for Z language files
+        if (filepath.endsWith('.tsx')) {
+            // Try to find document using the .tsx path (which is how it's stored)
+            const document = this.documents.get(filepath);
+            if (document) {
+                return document.uri;
+            }
+            // If no document found, convert to .z URI
+            const possibleZPath = filepath.slice(0, -4) + '.z';
+            return URI.file(possibleZPath);
+        }
+
         const fileUri = URI.file(filepath);
-        const document = this.documents.get(fileUri.fsPath);
+        const document = this.documents.get(filepath);
         return document ? document.uri : fileUri;
     }
 
@@ -352,7 +386,7 @@ export class TsClient implements ITypeScriptServiceClient {
         // }
 
         for (const root of this.workspaceFolders.sort(
-            (a, b) => a.uri.fsPath.length - b.uri.fsPath.length
+            (a, b) => a.uri.fsPath.length - b.uri.fsPath.length,
         )) {
             if (
                 root.uri.scheme === resource.scheme &&
@@ -371,7 +405,7 @@ export class TsClient implements ITypeScriptServiceClient {
         if (this.useSyntaxServer === SyntaxServerConfiguration.Always) {
             return new ClientCapabilities(
                 ClientCapability.Syntax,
-                ClientCapability.EnhancedSyntax
+                ClientCapability.EnhancedSyntax,
             );
         }
 
@@ -379,19 +413,19 @@ export class TsClient implements ITypeScriptServiceClient {
             return new ClientCapabilities(
                 ClientCapability.Syntax,
                 ClientCapability.EnhancedSyntax,
-                ClientCapability.Semantic
+                ClientCapability.Semantic,
             );
         }
 
         return new ClientCapabilities(
             ClientCapability.Syntax,
-            ClientCapability.Semantic
+            ClientCapability.Semantic,
         );
     }
 
     public hasCapabilityForResource(
         resource: URI,
-        capability: ClientCapability
+        capability: ClientCapability,
     ): boolean {
         if (!this.capabilities.has(capability)) {
             return false;
@@ -414,19 +448,65 @@ export class TsClient implements ITypeScriptServiceClient {
         if (this.apiVersion.gte(API.v314)) {
             this.executeWithoutWaitingForResponse(
                 CommandTypes.ConfigurePlugin,
-                { pluginName, configuration }
+                { pluginName, configuration },
             );
         }
     }
 
+    /**
+     * Transform TypeScript server response to convert .tsx file paths back to .z
+     */
+    private transformResponse<T extends ts.server.protocol.Response>(response: ServerResponse.Response<T>): ServerResponse.Response<T> {
+        if (!response || typeof response !== 'object' || 'type' in response) {
+            return response;
+        }
+
+        return this.transformObject(response) as ServerResponse.Response<T>;
+    }
+
+    /**
+     * Recursively transform an object to convert .tsx file paths back to .z
+     */
+    private transformObject(obj: any): any {
+        if (obj === null || obj === undefined) {
+            return obj;
+        }
+
+        if (typeof obj === 'string') {
+            if (obj.endsWith('.tsx')) {
+                return obj.slice(0, -4) + '.z';
+            }
+            return obj;
+        }
+
+        if (Array.isArray(obj)) {
+            return obj.map(item => this.transformObject(item));
+        }
+
+        if (typeof obj === 'object') {
+            const transformed: any = {};
+            for (const [key, value] of Object.entries(obj)) {
+                // Transform file paths in common TypeScript server response fields
+                if (key === 'file' || key === 'fileName' || key === 'name') {
+                    transformed[key] = this.transformObject(value);
+                } else {
+                    transformed[key] = this.transformObject(value);
+                }
+            }
+            return transformed;
+        }
+
+        return obj;
+    }
+
     start(
         workspaceRoot: string | undefined,
-        options: TsClientOptions
+        options: TsClientOptions,
     ): boolean {
         this.apiVersion =
             options.typescriptVersion.version || API.defaultVersion;
         this.typescriptVersionSource = options.typescriptVersion.source;
-        this.isNeovimHost = options.hostInfo === "neovim";
+        this.isNeovimHost = options.hostInfo === 'neovim';
         this.tracer = new Tracer(this.tsserverLogger, options.trace);
         this.workspaceFolders = workspaceRoot
             ? [{ uri: URI.file(workspaceRoot) }]
@@ -445,7 +525,7 @@ export class TsClient implements ITypeScriptServiceClient {
             this.apiVersion,
             options.logDirectoryProvider,
             this.logger,
-            this.tracer
+            this.tracer,
         );
         const tsServer = tsServerSpawner.spawn(
             options.typescriptVersion,
@@ -454,19 +534,19 @@ export class TsClient implements ITypeScriptServiceClient {
             this.pluginManager,
             {
                 onFatalError: (command, err) => this.fatalError(command, err),
-            }
+            },
         );
         this.serverState = new ServerState.Running(
             tsServer,
             this.apiVersion,
             undefined,
-            true
+            true,
         );
         tsServer.onExit((data: TypeScriptServerExitEvent) => {
             this.serverState = ServerState.None;
             this.shutdown();
             this.tsserverLogger.error(
-                `Exited. Code: ${data.code}. Signal: ${data.signal}`
+                `Exited. Code: ${data.code}. Signal: ${data.signal}`,
             );
             this.onExit?.(data.code, data.signal);
         });
@@ -478,12 +558,12 @@ export class TsClient implements ITypeScriptServiceClient {
         tsServer.onError((err: Error) => {
             this.serverState = new ServerState.Errored(
                 err,
-                tsServer.tsServerLogFile
+                tsServer.tsServerLogFile,
             );
             if (err) {
                 this.tsserverLogger.error(
-                    "Exited with error. Error message is: {0}",
-                    err.message || err.name
+                    'Exited with error. Error message is: {0}',
+                    err.message || err.name,
                 );
             }
             this.serviceExited();
@@ -528,7 +608,7 @@ export class TsClient implements ITypeScriptServiceClient {
                     event as ts.server.protocol.ProjectsUpdatedInBackgroundEvent
                 ).body;
                 const resources = body.openFiles.map((file) =>
-                    this.toResource(file)
+                    this.toResource(file),
                 );
                 this.documents.getErr(resources);
                 break;
@@ -545,13 +625,13 @@ export class TsClient implements ITypeScriptServiceClient {
             case EventName.projectLoadingStart:
                 this.loadingIndicator.startedLoadingProject(
                     (event as ts.server.protocol.ProjectLoadingStartEvent).body
-                        .projectName
+                        .projectName,
                 );
                 break;
             case EventName.projectLoadingFinish:
                 this.loadingIndicator.finishedLoadingProject(
                     (event as ts.server.protocol.ProjectLoadingFinishEvent).body
-                        .projectName
+                        .projectName,
                 );
                 break;
         }
@@ -571,16 +651,16 @@ export class TsClient implements ITypeScriptServiceClient {
         command: K,
         args: StandardTsServerRequests[K][0],
         token?: CancellationToken,
-        config?: ExecConfig
+        config?: ExecConfig,
     ): Promise<ServerResponse.Response<StandardTsServerRequests[K][1]>> {
         let executions:
-            | Array<
-                  | Promise<
-                        ServerResponse.Response<ts.server.protocol.Response>
-                    >
-                  | undefined
-              >
-            | undefined;
+        | Array<
+        | Promise<
+        ServerResponse.Response<ts.server.protocol.Response>
+        >
+        | undefined
+        >
+        | undefined;
 
         if (config?.cancelOnResourceChange) {
             const runningServerState = this.serverState;
@@ -604,7 +684,7 @@ export class TsClient implements ITypeScriptServiceClient {
                     .catch(() => {})
                     .finally(() => {
                         runningServerState.toCancelOnResourceChange.delete(
-                            inFlight
+                            inFlight,
                         );
                         source.dispose();
                     });
@@ -631,7 +711,9 @@ export class TsClient implements ITypeScriptServiceClient {
             });
         }
 
-        return executions[0]!.catch((error) => {
+        return executions[0]!.then((response) => {
+            return this.transformResponse(response);
+        }).catch((error) => {
             throw new ResponseError(1, (error as Error).message);
         });
     }
@@ -649,13 +731,15 @@ export class TsClient implements ITypeScriptServiceClient {
     public executeAsync<K extends keyof AsyncTsServerRequests>(
         command: K,
         args: AsyncTsServerRequests[K][0],
-        token: CancellationToken
+        token: CancellationToken,
     ): Promise<ServerResponse.Response<ts.server.protocol.Response>> {
         return this.executeImpl(command, args, {
             isAsync: true,
             token,
             expectsResult: true,
-        })[0]!;
+        })[0]!.then((response) => {
+            return this.transformResponse(response);
+        });
     }
 
     public interruptGetErr<R>(f: () => R): R {
@@ -687,11 +771,11 @@ export class TsClient implements ITypeScriptServiceClient {
             expectsResult: boolean;
             lowPriority?: boolean;
             requireSemantic?: boolean;
-        }
+        },
     ): Array<
         | Promise<ServerResponse.Response<ts.server.protocol.Response>>
         | undefined
-    > {
+        > {
         const serverState = this.serverState;
         if (serverState.type === ServerState.Type.Running) {
             return serverState.server.executeImpl(command, args, executeInfo);
@@ -702,14 +786,14 @@ export class TsClient implements ITypeScriptServiceClient {
 
     private fatalError(command: string, error: unknown): void {
         this.tsserverLogger.error(
-            `A non-recoverable error occurred while executing command: ${command}`
+            `A non-recoverable error occurred while executing command: ${command}`,
         );
         if (error instanceof TypeScriptServerError && error.serverErrorText) {
             this.tsserverLogger.error(error.serverErrorText);
         }
 
         if (this.serverState.type === ServerState.Type.Running) {
-            this.logger.info("Killing TS Server");
+            this.logger.info('Killing TS Server');
             const logfile = this.serverState.server.tsServerLogFile;
             this.serverState.server.kill();
             if (error instanceof TypeScriptServerError) {
