@@ -71,10 +71,10 @@ describe('completions', () => {
 
     it('receives completion that auto-imports from another module', async () => {
         const doc = {
-            uri: uri('completion.ts'),
+            uri: uri('completion.z'),
             languageId: 'z',
             version: 1,
-            text: readContents(filePath('completion.ts')),
+            text: readContents(filePath('completion.z')),
         };
         await openDocumentAndWaitForDiagnostics(server, doc);
         const proposals = await server.completion({
