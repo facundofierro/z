@@ -67,9 +67,9 @@ describe('call hierarchy', () => {
         server.shutdown();
     });
 
-    const oneDoc = documentFromFile({ path: 'call-hierarchy/one.ts' });
-    const twoDoc = documentFromFile({ path: 'call-hierarchy/two.ts' });
-    const threeDoc = documentFromFile({ path: 'call-hierarchy/three.ts' });
+    const oneDoc = documentFromFile({ path: 'call-hierarchy/one.z' });
+    const twoDoc = documentFromFile({ path: 'call-hierarchy/two.z' });
+    const threeDoc = documentFromFile({ path: 'call-hierarchy/three.z' });
 
     async function openDocuments() {
         for (const textDocument of [oneDoc, twoDoc, threeDoc]) {

@@ -48,7 +48,7 @@ describe('ts server client', () => {
     });
 
     it('completion', async () => {
-        const f = filePath('module2.ts');
+        const f = filePath('module2.z');
         server.executeWithoutWaitingForResponse(CommandTypes.Open, {
             file: f,
             fileContent: readContents(f),
@@ -68,7 +68,7 @@ describe('ts server client', () => {
     });
 
     it('references', async () => {
-        const f = filePath('module2.ts');
+        const f = filePath('module2.z');
         server.executeWithoutWaitingForResponse(CommandTypes.Open, {
             file: f,
             fileContent: readContents(f),
@@ -87,7 +87,7 @@ describe('ts server client', () => {
     });
 
     it('inlayHints', async () => {
-        const f = filePath('module2.ts');
+        const f = filePath('module2.z');
         server.executeWithoutWaitingForResponse(CommandTypes.Open, {
             file: f,
             fileContent: readContents(f),
@@ -114,7 +114,7 @@ describe('ts server client', () => {
     });
 
     it('documentHighlight', async () => {
-        const f = filePath('module2.ts');
+        const f = filePath('module2.z');
         server.executeWithoutWaitingForResponse(CommandTypes.Open, {
             file: f,
             fileContent: readContents(f),
@@ -130,7 +130,7 @@ describe('ts server client', () => {
             throw Error('Not a response');
         }
         expect(response.body).not.toBeNull();
-        expect(response.body!.some(({ file }) => file.endsWith('module2.ts'))).toBeTruthy();
-        expect(response.body!.some(({ file: file_1 }) => file_1.endsWith('module1.ts'))).toBeFalsy();
+        expect(response.body!.some(({ file }) => file.endsWith('module2.z'))).toBeTruthy();
+        expect(response.body!.some(({ file: file_1 }) => file_1.endsWith('module1.z'))).toBeFalsy();
     });
 });
