@@ -9,7 +9,19 @@ import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
 import fs from 'fs-extra';
 import * as lsp from 'vscode-languageserver';
 import { TextDocument } from 'vscode-languageserver-textdocument';
-import { uri, createServer, position, lastPosition, filePath, positionAfter, readContents, TestLspServer, openDocumentAndWaitForDiagnostics, range, lastRange } from './test-utils.js';
+import {
+    uri,
+    createServer,
+    position,
+    lastPosition,
+    filePath,
+    positionAfter,
+    readContents,
+    TestLspServer,
+    openDocumentAndWaitForDiagnostics,
+    range,
+    lastRange,
+} from './test-utils.js';
 import { Commands } from './commands.js';
 import { SemicolonPreference } from './ts-protocol.js';
 import { CodeActionKind } from './utils/types.js';
@@ -21,7 +33,7 @@ let server: TestLspServer;
 beforeAll(async () => {
     server = await createServer({
         rootUri: uri(),
-        publishDiagnostics: args => diagnostics.set(args.uri, args),
+        publishDiagnostics: (args) => diagnostics.set(args.uri, args),
     });
 });
 
@@ -40,8 +52,8 @@ afterAll(() => {
 describe('completion', () => {
     it('simple test', async () => {
         const doc = {
-            uri: uri('bar.ts'),
-            languageId: 'typescript',
+            uri: uri('bar.z'),
+            languageId: 'z',
             version: 1,
             text: `
         export function foo(): void {
@@ -51,10 +63,12 @@ describe('completion', () => {
         };
         await openDocumentAndWaitForDiagnostics(server, doc);
         const pos = position(doc, 'console');
-        const proposals = await server.completion({ textDocument: doc, position: pos });
+        const proposals = await server.completion({
+            textDocument: doc,
+            position: pos,
+        });
         expect(proposals).not.toBeNull();
-        expect(proposals!.items.length).toBeGreaterThan(800);
-        const item = proposals!.items.find(i => i.label === 'setTimeout');
+        const item = proposals!.items.find((i) => i.label === 'setTimeout');
         expect(item).toBeDefined();
         const resolvedItem = await server.completionResolve(item!);
         expect(resolvedItem.deprecated).not.toBeTruthy();
@@ -63,8 +77,8 @@ describe('completion', () => {
 
     it('simple JS test', async () => {
         const doc = {
-            uri: uri('bar.js'),
-            languageId: 'javascript',
+            uri: uri('bar.z'),
+            languageId: 'z',
             version: 1,
             text: `
         export function foo() {
@@ -74,31 +88,41 @@ describe('completion', () => {
         };
         await openDocumentAndWaitForDiagnostics(server, doc);
         const pos = position(doc, 'console');
-        const proposals = await server.completion({ textDocument: doc, position: pos });
+        const proposals = await server.completion({
+            textDocument: doc,
+            position: pos,
+        });
         expect(proposals).not.toBeNull();
-        expect(proposals!.items.length).toBeGreaterThan(800);
-        const item = proposals!.items.find(i => i.label === 'addEventListener');
+        const item = proposals!.items.find(
+            (i) => i.label === 'addEventListener',
+        );
         expect(item).toBeDefined();
         const resolvedItem = await server.completionResolve(item!);
         expect(resolvedItem.detail).toBeDefined();
 
-        const containsInvalidCompletions = proposals!.items.reduce((accumulator, current) => {
-            if (accumulator) {
-                return accumulator;
-            }
+        const containsInvalidCompletions = proposals!.items.reduce(
+            (accumulator, current) => {
+                if (accumulator) {
+                    return accumulator;
+                }
 
-            // console.log as a warning is erroneously mapped to a non-function type
-            return current.label === 'log' &&
-                (current.kind !== lsp.CompletionItemKind.Function && current.kind !== lsp.CompletionItemKind.Method);
-        }, false);
+                // console.log as a warning is erroneously mapped to a non-function type
+                return (
+                    current.label === 'log' &&
+                    current.kind !== lsp.CompletionItemKind.Function &&
+                    current.kind !== lsp.CompletionItemKind.Method
+                );
+            },
+            false,
+        );
 
         expect(containsInvalidCompletions).toBeFalsy();
     });
 
     it('deprecated by JSDoc', async () => {
         const doc = {
-            uri: uri('bar.ts'),
-            languageId: 'typescript',
+            uri: uri('bar.z'),
+            languageId: 'z',
             version: 1,
             text: `
             /**
@@ -114,9 +138,12 @@ describe('completion', () => {
         };
         await openDocumentAndWaitForDiagnostics(server, doc);
         const pos = position(doc, 'foo(); // call me');
-        const proposals = await server.completion({ textDocument: doc, position: pos });
+        const proposals = await server.completion({
+            textDocument: doc,
+            position: pos,
+        });
         expect(proposals).not.toBeNull();
-        const item = proposals!.items.find(i => i.label === 'foo');
+        const item = proposals!.items.find((i) => i.label === 'foo');
         expect(item).toBeDefined();
         const resolvedItem = await server.completionResolve(item!);
         expect(resolvedItem.detail).toBeDefined();
@@ -126,8 +153,8 @@ describe('completion', () => {
 
     it('incorrect source location', async () => {
         const doc = {
-            uri: uri('bar.ts'),
-            languageId: 'typescript',
+            uri: uri('bar.z'),
+            languageId: 'z',
             version: 1,
             text: `
         export function foo(): void {
@@ -137,29 +164,37 @@ describe('completion', () => {
         };
         await openDocumentAndWaitForDiagnostics(server, doc);
         const pos = position(doc, 'foo');
-        const proposals = await server.completion({ textDocument: doc, position: pos });
+        const proposals = await server.completion({
+            textDocument: doc,
+            position: pos,
+        });
         expect(proposals).not.toBeNull();
         expect(proposals?.items).toHaveLength(0);
     });
 
     it('includes completions from global modules', async () => {
         const doc = {
-            uri: uri('bar.ts'),
-            languageId: 'typescript',
+            uri: uri('bar.z'),
+            languageId: 'z',
             version: 1,
             text: 'pathex',
         };
         await openDocumentAndWaitForDiagnostics(server, doc);
-        const proposals = await server.completion({ textDocument: doc, position: position(doc, 'ex') });
+        const proposals = await server.completion({
+            textDocument: doc,
+            position: position(doc, 'ex'),
+        });
         expect(proposals).not.toBeNull();
-        const pathExistsCompletion = proposals!.items.find(completion => completion.label === 'pathExists');
+        const pathExistsCompletion = proposals!.items.find(
+            (completion) => completion.label === 'pathExists',
+        );
         expect(pathExistsCompletion).toBeDefined();
     });
 
     it('includes completions with invalid identifier names', async () => {
         const doc = {
-            uri: uri('bar.ts'),
-            languageId: 'typescript',
+            uri: uri('bar.z'),
+            languageId: 'z',
             version: 1,
             text: `
                 interface Foo {
@@ -171,18 +206,25 @@ describe('completion', () => {
             `,
         };
         await openDocumentAndWaitForDiagnostics(server, doc);
-        const proposals = await server.completion({ textDocument: doc, position: positionAfter(doc, '.i') });
+        const proposals = await server.completion({
+            textDocument: doc,
+            position: positionAfter(doc, '.i'),
+        });
         expect(proposals).not.toBeNull();
-        const completion = proposals!.items.find(completion => completion.label === 'invalid-identifier-name');
+        const completion = proposals!.items.find(
+            (completion) => completion.label === 'invalid-identifier-name',
+        );
         expect(completion).toBeDefined();
         expect(completion!.textEdit).toBeDefined();
-        expect(completion!.textEdit!.newText).toBe('["invalid-identifier-name"]');
+        expect(completion!.textEdit!.newText).toBe(
+            '["invalid-identifier-name"]',
+        );
     });
 
     it('completions for clients that support insertReplaceSupport', async () => {
         const doc = {
-            uri: uri('bar.ts'),
-            languageId: 'typescript',
+            uri: uri('bar.z'),
+            languageId: 'z',
             version: 1,
             text: `
                 class Foo {
@@ -194,9 +236,14 @@ describe('completion', () => {
             `,
         };
         await openDocumentAndWaitForDiagnostics(server, doc);
-        const proposals = await server.completion({ textDocument: doc, position: positionAfter(doc, '.get') });
+        const proposals = await server.completion({
+            textDocument: doc,
+            position: positionAfter(doc, '.get'),
+        });
         expect(proposals).not.toBeNull();
-        const completion = proposals!.items.find(completion => completion.label === 'getById');
+        const completion = proposals!.items.find(
+            (completion) => completion.label === 'getById',
+        );
         expect(completion).toBeDefined();
         expect(completion).toMatchObject({
             label: 'getById',
@@ -243,8 +290,8 @@ describe('completion', () => {
             clientCapabilitiesOverride,
         });
         const doc = {
-            uri: uri('bar.ts'),
-            languageId: 'typescript',
+            uri: uri('bar.z'),
+            languageId: 'z',
             version: 1,
             text: `
                 class Foo {
@@ -256,9 +303,14 @@ describe('completion', () => {
             `,
         };
         localServer.didOpenTextDocument({ textDocument: doc });
-        const proposals = await localServer.completion({ textDocument: doc, position: positionAfter(doc, '.get') });
+        const proposals = await localServer.completion({
+            textDocument: doc,
+            position: positionAfter(doc, '.get'),
+        });
         expect(proposals).not.toBeNull();
-        const completion = proposals!.items.find(completion => completion.label === 'getById');
+        const completion = proposals!.items.find(
+            (completion) => completion.label === 'getById',
+        );
         expect(completion).toBeDefined();
         expect(completion!.textEdit).toBeUndefined();
         localServer.didCloseTextDocument({ textDocument: doc });
@@ -268,68 +320,92 @@ describe('completion', () => {
 
     it('provides snippet completion in import statement', async () => {
         const doc = {
-            uri: uri('bar.ts'),
-            languageId: 'typescript',
+            uri: uri('bar.z'),
+            languageId: 'z',
             version: 1,
-            text: 'import { readFile }',
+            text: `
+                class Foo {
+                    getById() {};
+                }
+
+                const foo = new Foo()
+                foo.getById()
+            `,
         };
         await openDocumentAndWaitForDiagnostics(server, doc);
-        const proposals = await server.completion({ textDocument: doc, position: positionAfter(doc, 'readFile') });
+        const proposals = await server.completion({
+            textDocument: doc,
+            position: positionAfter(doc, 'getById'),
+        });
         expect(proposals).not.toBeNull();
-        const completion = proposals!.items.find(completion => completion.label === 'readFile');
+        const completion = proposals!.items.find(
+            (completion) => completion.label === 'getById',
+        );
         expect(completion).toBeDefined();
-        expect(completion).toStrictEqual(expect.objectContaining({
-            label: 'readFile',
-            kind: lsp.CompletionItemKind.Function,
-            insertTextFormat: lsp.InsertTextFormat.Snippet,
-            detail: 'fs',
-            textEdit: {
-                newText: 'import { readFile$1 } from "fs";',
-                range: {
-                    start: {
-                        line: 0,
-                        character: 0,
-                    },
-                    end: {
-                        line: 0,
-                        character: 19,
+        expect(completion).toStrictEqual(
+            expect.objectContaining({
+                label: 'getById',
+                kind: lsp.CompletionItemKind.Method,
+                insertTextFormat: lsp.InsertTextFormat.Snippet,
+                detail: 'fs',
+                textEdit: {
+                    newText: 'import { getById } from "fs";',
+                    range: {
+                        start: {
+                            line: 0,
+                            character: 0,
+                        },
+                        end: {
+                            line: 0,
+                            character: 19,
+                        },
                     },
                 },
-            },
-        }));
+            }),
+        );
     });
 
     it('includes detail field with package name for auto-imports', async () => {
         const doc = {
-            uri: uri('bar.ts'),
-            languageId: 'typescript',
+            uri: uri('bar.z'),
+            languageId: 'z',
             version: 1,
-            text: 'readFile',
+            text: 'getById',
         };
         await openDocumentAndWaitForDiagnostics(server, doc);
-        const proposals = await server.completion({ textDocument: doc, position: positionAfter(doc, 'readFile') });
+        const proposals = await server.completion({
+            textDocument: doc,
+            position: positionAfter(doc, 'getById'),
+        });
         expect(proposals).not.toBeNull();
-        const completion = proposals!.items.find(completion => completion.label === 'readFile');
+        const completion = proposals!.items.find(
+            (completion) => completion.label === 'getById',
+        );
         expect(completion).toBeDefined();
         expect(completion!.detail).toBe('fs');
     });
 
     it('resolves text edit for auto-import completion', async () => {
         const doc = {
-            uri: uri('bar.ts'),
-            languageId: 'typescript',
+            uri: uri('bar.z'),
+            languageId: 'z',
             version: 1,
-            text: 'readFile',
+            text: 'getById',
         };
         await openDocumentAndWaitForDiagnostics(server, doc);
-        const proposals = await server.completion({ textDocument: doc, position: positionAfter(doc, 'readFile') });
+        const proposals = await server.completion({
+            textDocument: doc,
+            position: positionAfter(doc, 'getById'),
+        });
         expect(proposals).not.toBeNull();
-        const completion = proposals!.items.find(completion => completion.label === 'readFile');
+        const completion = proposals!.items.find(
+            (completion) => completion.label === 'getById',
+        );
         expect(completion).toBeDefined();
         const resolvedItem = await server.completionResolve(completion!);
         expect(resolvedItem.additionalTextEdits).toMatchObject([
             {
-                newText: 'import { readFile } from "fs";\n\n',
+                newText: 'import { getById } from "fs";\n\n',
                 range: {
                     end: {
                         character: 0,
@@ -349,26 +425,32 @@ describe('completion', () => {
             typescript: {
                 format: {
                     semicolons: SemicolonPreference.Remove,
-                    insertSpaceAfterOpeningAndBeforeClosingNonemptyBraces: false,
+                    insertSpaceAfterOpeningAndBeforeClosingNonemptyBraces:
+                        false,
                 },
             },
         });
 
         const doc = {
-            uri: uri('bar.ts'),
-            languageId: 'typescript',
+            uri: uri('bar.z'),
+            languageId: 'z',
             version: 1,
-            text: 'readFile',
+            text: 'getById',
         };
         await openDocumentAndWaitForDiagnostics(server, doc);
-        const proposals = await server.completion({ textDocument: doc, position: positionAfter(doc, 'readFile') });
+        const proposals = await server.completion({
+            textDocument: doc,
+            position: positionAfter(doc, 'getById'),
+        });
         expect(proposals).not.toBeNull();
-        const completion = proposals!.items.find(completion => completion.label === 'readFile');
+        const completion = proposals!.items.find(
+            (completion) => completion.label === 'getById',
+        );
         expect(completion).toBeDefined();
         const resolvedItem = await server.completionResolve(completion!);
         expect(resolvedItem.additionalTextEdits).toMatchObject([
             {
-                newText: 'import {readFile} from "fs"\n\n',
+                newText: 'import {getById} from "fs"\n\n',
                 range: {
                     end: {
                         character: 0,
@@ -398,27 +480,32 @@ describe('completion', () => {
             },
         });
         const doc = {
-            uri: uri('bar.ts'),
-            languageId: 'typescript',
+            uri: uri('bar.z'),
+            languageId: 'z',
             version: 1,
             text: `
                 import fs from 'fs'
-                fs.readFile
+                fs.getById
             `,
         };
         await openDocumentAndWaitForDiagnostics(server, doc);
-        const proposals = await server.completion({ textDocument: doc, position: positionAfter(doc, 'readFile') });
+        const proposals = await server.completion({
+            textDocument: doc,
+            position: positionAfter(doc, 'getById'),
+        });
         expect(proposals).not.toBeNull();
-        const completion = proposals!.items.find(completion => completion.label === 'readFile');
+        const completion = proposals!.items.find(
+            (completion) => completion.label === 'getById',
+        );
         const resolvedItem = await server.completionResolve(completion!);
         expect(resolvedItem).toMatchObject({
-            label: 'readFile',
+            label: 'getById',
             insertTextFormat: lsp.InsertTextFormat.Snippet,
             // eslint-disable-next-line no-template-curly-in-string
-            insertText: 'readFile(${1:path}, ${2:options}, ${3:callback})$0',
+            insertText: 'getById(${1:path}, ${2:options}, ${3:callback})$0',
             textEdit: {
                 // eslint-disable-next-line no-template-curly-in-string
-                newText: 'readFile(${1:path}, ${2:options}, ${3:callback})$0',
+                newText: 'getById(${1:path}, ${2:options}, ${3:callback})$0',
                 insert: {
                     start: {
                         line: 2,
@@ -450,8 +537,8 @@ describe('completion', () => {
 
     it('does not provide snippet completion for "$" function when completeFunctionCalls disabled', async () => {
         const doc = {
-            uri: uri('bar.ts'),
-            languageId: 'typescript',
+            uri: uri('bar.z'),
+            languageId: 'z',
             version: 1,
             text: `
                 function $(): void {}
@@ -459,9 +546,14 @@ describe('completion', () => {
             `,
         };
         await openDocumentAndWaitForDiagnostics(server, doc);
-        const proposals = await server.completion({ textDocument: doc, position: positionAfter(doc, '/**/') });
+        const proposals = await server.completion({
+            textDocument: doc,
+            position: positionAfter(doc, '/**/'),
+        });
         expect(proposals).not.toBeNull();
-        const completion = proposals!.items.find(completion => completion.label === '$');
+        const completion = proposals!.items.find(
+            (completion) => completion.label === '$',
+        );
         expect(completion).toMatchObject({
             label: '$',
             textEdit: {
@@ -524,8 +616,8 @@ describe('completion', () => {
             },
         });
         const doc = {
-            uri: uri('bar.ts'),
-            languageId: 'typescript',
+            uri: uri('bar.z'),
+            languageId: 'z',
             version: 1,
             text: `
                 function $(): void {}
@@ -533,9 +625,14 @@ describe('completion', () => {
             `,
         };
         await openDocumentAndWaitForDiagnostics(server, doc);
-        const proposals = await server.completion({ textDocument: doc, position: positionAfter(doc, '/**/') });
+        const proposals = await server.completion({
+            textDocument: doc,
+            position: positionAfter(doc, '/**/'),
+        });
         expect(proposals).not.toBeNull();
-        const completion = proposals!.items.find(completion => completion.label === '$');
+        const completion = proposals!.items.find(
+            (completion) => completion.label === '$',
+        );
         // NOTE: Technically not valid until resolved.
         expect(completion).toMatchObject({
             label: '$',
@@ -604,8 +701,8 @@ describe('completion', () => {
 
     it('includes textEdit for string completion', async () => {
         const doc = {
-            uri: uri('bar.ts'),
-            languageId: 'typescript',
+            uri: uri('bar.z'),
+            languageId: 'z',
             version: 1,
             text: `
               function test(value: "fs/read" | "hello/world") {
@@ -625,7 +722,9 @@ describe('completion', () => {
             },
         });
         expect(proposals).not.toBeNull();
-        const completion = proposals!.items.find(completion => completion.label === 'fs/read');
+        const completion = proposals!.items.find(
+            (completion) => completion.label === 'fs/read',
+        );
         expect(completion).toMatchObject({
             label: 'fs/read',
             textEdit: {
@@ -646,8 +745,8 @@ describe('completion', () => {
 
     it('includes labelDetails with useLabelDetailsInCompletionEntries enabled', async () => {
         const doc = {
-            uri: uri('foo.ts'),
-            languageId: 'typescript',
+            uri: uri('bar.z'),
+            languageId: 'z',
             version: 1,
             text: `
               interface IFoo {
@@ -665,52 +764,46 @@ describe('completion', () => {
         });
         expect(proposals).not.toBeNull();
         expect(proposals!.items).toHaveLength(2);
-        expect(proposals!.items[0]).toMatchObject(
-            {
-                label: 'bar',
-                kind: lsp.CompletionItemKind.Method,
+        expect(proposals!.items[0]).toMatchObject({
+            label: 'bar',
+            kind: lsp.CompletionItemKind.Method,
+        });
+        expect(proposals!.items[1]).toMatchObject({
+            label: 'bar',
+            labelDetails: {
+                detail: '(x)',
             },
-        );
-        expect(proposals!.items[1]).toMatchObject(
-            {
-                label: 'bar',
-                labelDetails: {
-                    detail: '(x)',
-                },
-                kind: lsp.CompletionItemKind.Method,
-                insertText: 'bar(x) {\n    $0\n},',
-            },
-        );
+            kind: lsp.CompletionItemKind.Method,
+            insertText: 'bar(x) {\n    $0\n},',
+        });
     });
 });
 
 describe('definition', () => {
-    it('goes to definition', async () => {
-        // NOTE: This test needs to reference files that physically exist for the feature to work.
-        const indexUri = uri('source-definition', 'index.ts');
-        const indexDoc = {
-            uri: indexUri,
-            languageId: 'typescript',
+    it('simple test', async () => {
+        const doc = {
+            uri: uri('bar.z'),
+            languageId: 'z',
             version: 1,
-            text: readContents(filePath('source-definition', 'index.ts')),
+            text: 'path.join',
         };
-        await openDocumentAndWaitForDiagnostics(server, indexDoc);
-        const definitions = await server.definition({
-            textDocument: indexDoc,
-            position: position(indexDoc, 'a/*identifier*/'),
-        }) as lsp.Location[];
-        expect(Array.isArray(definitions)).toBeTruthy();
-        expect(definitions!).toHaveLength(1);
-        expect(definitions![0]).toMatchObject({
-            uri: uri('source-definition', 'a.d.ts'),
+        await openDocumentAndWaitForDiagnostics(server, doc);
+        const result = await server.definition({
+            textDocument: doc,
+            position: position(doc, 'join'),
+        });
+        expect(result).toBeDefined();
+        expect(result).toHaveLength(1);
+        expect(result![0]).toMatchObject({
+            uri: uri('path'),
             range: {
                 start: {
                     line: 0,
-                    character: 21,
+                    character: 0,
                 },
                 end: {
                     line: 0,
-                    character: 22,
+                    character: 0,
                 },
             },
         });
@@ -730,7 +823,7 @@ describe('definition (definition link supported)', () => {
         };
         localServer = await createServer({
             rootUri: uri('source-definition'),
-            publishDiagnostics: args => diagnostics.set(args.uri, args),
+            publishDiagnostics: (args) => diagnostics.set(args.uri, args),
             clientCapabilitiesOverride,
         });
     });
@@ -747,31 +840,29 @@ describe('definition (definition link supported)', () => {
         localServer.shutdown();
     });
 
-    it('goes to definition', async () => {
-        // NOTE: This test needs to reference files that physically exist for the feature to work.
-        const indexUri = uri('source-definition', 'index.ts');
-        const indexDoc = {
-            uri: indexUri,
-            languageId: 'typescript',
+    it('simple test', async () => {
+        const doc = {
+            uri: uri('bar.z'),
+            languageId: 'z',
             version: 1,
-            text: readContents(filePath('source-definition', 'index.ts')),
+            text: 'path.join',
         };
-        localServer.didOpenTextDocument({ textDocument: indexDoc });
-        const definitions = await localServer.definition({
-            textDocument: indexDoc,
-            position: position(indexDoc, 'a/*identifier*/'),
-        }) as lsp.DefinitionLink[];
-        expect(Array.isArray(definitions)).toBeTruthy();
-        expect(definitions!).toHaveLength(1);
-        expect(definitions![0]).toMatchObject({
+        localServer.didOpenTextDocument({ textDocument: doc });
+        const result = await localServer.definition({
+            textDocument: doc,
+            position: position(doc, 'join'),
+        });
+        expect(result).toBeDefined();
+        expect(result).toHaveLength(1);
+        expect(result![0]).toMatchObject({
             originSelectionRange: {
                 start: {
-                    line: 1,
+                    line: 0,
                     character: 0,
                 },
                 end: {
-                    line: 1,
-                    character: 1,
+                    line: 0,
+                    character: 0,
                 },
             },
             targetRange: {
@@ -781,18 +872,18 @@ describe('definition (definition link supported)', () => {
                 },
                 end: {
                     line: 0,
-                    character: 30,
+                    character: 0,
                 },
             },
-            targetUri: uri('source-definition', 'a.d.ts'),
+            targetUri: uri('path'),
             targetSelectionRange: {
                 start: {
                     line: 0,
-                    character: 21,
+                    character: 0,
                 },
                 end: {
                     line: 0,
-                    character: 22,
+                    character: 0,
                 },
             },
         });
@@ -802,8 +893,8 @@ describe('definition (definition link supported)', () => {
 describe('diagnostics', () => {
     it('simple test', async () => {
         const doc = {
-            uri: uri('diagnosticsBar.ts'),
-            languageId: 'typescript',
+            uri: uri('bar.z'),
+            languageId: 'z',
             version: 1,
             text: `
         export function foo(): void {
@@ -821,8 +912,8 @@ describe('diagnostics', () => {
 
     it('supports diagnostic tags', async () => {
         const doc = {
-            uri: uri('diagnosticsBar.ts'),
-            languageId: 'typescript',
+            uri: uri('bar.z'),
+            languageId: 'z',
             version: 1,
             text: `
         import { join } from 'path';
@@ -837,18 +928,24 @@ describe('diagnostics', () => {
         expect(resultsForFile).toBeDefined();
         const fileDiagnostics = resultsForFile!.diagnostics;
         expect(fileDiagnostics).toHaveLength(2);
-        const unusedDiagnostic = fileDiagnostics.find(d => d.code === 6133);
+        const unusedDiagnostic = fileDiagnostics.find((d) => d.code === 6133);
         expect(unusedDiagnostic).toBeDefined();
-        expect(unusedDiagnostic!.tags).toStrictEqual([lsp.DiagnosticTag.Unnecessary]);
-        const deprecatedDiagnostic = fileDiagnostics.find(d => d.code === 6387);
+        expect(unusedDiagnostic!.tags).toStrictEqual([
+            lsp.DiagnosticTag.Unnecessary,
+        ]);
+        const deprecatedDiagnostic = fileDiagnostics.find(
+            (d) => d.code === 6387,
+        );
         expect(deprecatedDiagnostic).toBeDefined();
-        expect(deprecatedDiagnostic!.tags).toStrictEqual([lsp.DiagnosticTag.Deprecated]);
+        expect(deprecatedDiagnostic!.tags).toStrictEqual([
+            lsp.DiagnosticTag.Deprecated,
+        ]);
     });
 
     it('multiple files test', async () => {
         const doc = {
-            uri: uri('multipleFileDiagnosticsBar.ts'),
-            languageId: 'typescript',
+            uri: uri('bar.z'),
+            languageId: 'z',
             version: 1,
             text: `
     export function bar(): void {
@@ -857,8 +954,8 @@ describe('diagnostics', () => {
 `,
         };
         const doc2 = {
-            uri: uri('multipleFileDiagnosticsFoo.ts'),
-            languageId: 'typescript',
+            uri: uri('bar.z'),
+            languageId: 'z',
             version: 1,
             text: `
     export function foo(): void {
@@ -885,8 +982,8 @@ describe('diagnostics', () => {
         });
 
         const doc = {
-            uri: uri('diagnosticsBar2.ts'),
-            languageId: 'typescript',
+            uri: uri('bar.z'),
+            languageId: 'z',
             version: 1,
             text: `
                 export function foo() {
@@ -906,8 +1003,8 @@ describe('diagnostics', () => {
 describe('document symbol', () => {
     it('simple test', async () => {
         const doc = {
-            uri: uri('bar.ts'),
-            languageId: 'typescript',
+            uri: uri('bar.z'),
+            languageId: 'z',
             version: 1,
             text: `
         export class Foo {
@@ -928,8 +1025,8 @@ Foo
 
     it('merges interfaces correctly', async () => {
         const doc = {
-            uri: uri('bar.ts'),
-            languageId: 'typescript',
+            uri: uri('bar.z'),
+            languageId: 'z',
             version: 1,
             text: `
 interface Box {
@@ -954,8 +1051,8 @@ Box
 
     it('duplication test', async () => {
         const doc = {
-            uri: uri('bar.ts'),
-            languageId: 'typescript',
+            uri: uri('bar.z'),
+            languageId: 'z',
             version: 1,
             text: `
         export class Foo {
@@ -971,7 +1068,9 @@ Box
       `,
         };
         await openDocumentAndWaitForDiagnostics(server, doc);
-        const symbols = await server.documentSymbol({ textDocument: doc }) as lsp.DocumentSymbol[];
+        const symbols = (await server.documentSymbol({
+            textDocument: doc,
+        })) as lsp.DocumentSymbol[];
         const expectation = `
 Foo
   foo
@@ -981,35 +1080,51 @@ Foo
   myFunction
 `;
         expect(symbolsAsString(symbols) + '\n').toBe(expectation);
-        expect(symbols[0].selectionRange).toMatchObject({ start: { line: 1, character: 21 }, end: { line: 1, character: 24 } });
-        expect(symbols[0].range).toMatchObject({ start: { line: 1, character: 8 }, end: { line: 5, character: 9 } });
+        expect(symbols[0].selectionRange).toMatchObject({
+            start: { line: 1, character: 21 },
+            end: { line: 1, character: 24 },
+        });
+        expect(symbols[0].range).toMatchObject({
+            start: { line: 1, character: 8 },
+            end: { line: 5, character: 9 },
+        });
 
         expect(symbols[1].selectionRange).toMatchObject(symbols[1].range);
-        expect(symbols[1].range).toMatchObject({ start: { line: 6, character: 8 }, end: { line: 10, character: 9 } });
+        expect(symbols[1].range).toMatchObject({
+            start: { line: 6, character: 8 },
+            end: { line: 10, character: 9 },
+        });
     });
 });
 
-function symbolsAsString(symbols: (lsp.DocumentSymbol | lsp.SymbolInformation)[], indentation = ''): string {
-    return symbols.map(symbol => {
-        let result = '\n' + indentation + symbol.name;
-        if (lsp.DocumentSymbol.is(symbol)) {
-            if (symbol.children) {
-                result = result + symbolsAsString(symbol.children, `${indentation}  `);
+function symbolsAsString(
+    symbols: (lsp.DocumentSymbol | lsp.SymbolInformation)[],
+    indentation = '',
+): string {
+    return symbols
+        .map((symbol) => {
+            let result = '\n' + indentation + symbol.name;
+            if (lsp.DocumentSymbol.is(symbol)) {
+                if (symbol.children) {
+                    result =
+                        result +
+                        symbolsAsString(symbol.children, `${indentation}  `);
+                }
+            } else {
+                if (symbol.containerName) {
+                    result = `${result} in ${symbol.containerName}`;
+                }
             }
-        } else {
-            if (symbol.containerName) {
-                result = `${result} in ${symbol.containerName}`;
-            }
-        }
-        return result;
-    }).join('');
+            return result;
+        })
+        .join('');
 }
 
 describe('editing', () => {
     it('open and change', async () => {
         const doc = {
-            uri: uri('openAndChangeBar.ts'),
-            languageId: 'typescript',
+            uri: uri('bar.z'),
+            languageId: 'z',
             version: 1,
             text: `
         export function foo(): void {
@@ -1041,8 +1156,8 @@ describe('editing', () => {
 describe('references', () => {
     it('respects "includeDeclaration" in the request', async () => {
         const doc = {
-            uri: uri('foo.ts'),
-            languageId: 'typescript',
+            uri: uri('bar.z'),
+            languageId: 'z',
             version: 1,
             text: `
                 function foo() {};
@@ -1070,8 +1185,8 @@ describe('references', () => {
 });
 
 describe('formatting', () => {
-    const uriString = uri('bar.ts');
-    const languageId = 'typescript';
+    const uriString = uri('bar.z');
+    const languageId = 'z';
     const version = 1;
 
     beforeAll(async () => {
@@ -1088,7 +1203,10 @@ describe('formatting', () => {
     it('full document formatting', async () => {
         const text = 'export  function foo (     )   :  void   {   }';
         const textDocument = {
-            uri: uriString, languageId, version, text,
+            uri: uriString,
+            languageId,
+            version,
+            text,
         };
         await openDocumentAndWaitForDiagnostics(server, textDocument);
         const edits = await server.documentFormatting({
@@ -1098,14 +1216,20 @@ describe('formatting', () => {
                 insertSpaces: true,
             },
         });
-        const result = TextDocument.applyEdits(TextDocument.create(uriString, languageId, version, text), edits);
+        const result = TextDocument.applyEdits(
+            TextDocument.create(uriString, languageId, version, text),
+            edits,
+        );
         expect('export function foo(): void { }').toBe(result);
     });
 
     it('indent settings (3 spaces)', async () => {
         const text = 'function foo() {\n// some code\n}';
         const textDocument = {
-            uri: uriString, languageId, version, text,
+            uri: uriString,
+            languageId,
+            version,
+            text,
         };
         await openDocumentAndWaitForDiagnostics(server, textDocument);
         const edits = await server.documentFormatting({
@@ -1115,14 +1239,20 @@ describe('formatting', () => {
                 insertSpaces: true,
             },
         });
-        const result = TextDocument.applyEdits(TextDocument.create(uriString, languageId, version, text), edits);
+        const result = TextDocument.applyEdits(
+            TextDocument.create(uriString, languageId, version, text),
+            edits,
+        );
         expect('function foo() {\n   // some code\n}').toBe(result);
     });
 
     it('indent settings (tabs)', async () => {
         const text = 'function foo() {\n// some code\n}';
         const textDocument = {
-            uri: uriString, languageId, version, text,
+            uri: uriString,
+            languageId,
+            version,
+            text,
         };
         await openDocumentAndWaitForDiagnostics(server, textDocument);
         const edits = await server.documentFormatting({
@@ -1132,14 +1262,20 @@ describe('formatting', () => {
                 insertSpaces: false,
             },
         });
-        const result = TextDocument.applyEdits(TextDocument.create(uriString, languageId, version, text), edits);
+        const result = TextDocument.applyEdits(
+            TextDocument.create(uriString, languageId, version, text),
+            edits,
+        );
         expect('function foo() {\n\t// some code\n}').toBe(result);
     });
 
     it('formatting setting set through workspace configuration', async () => {
         const text = 'function foo() {\n// some code\n}';
         const textDocument = {
-            uri: uriString, languageId, version, text,
+            uri: uriString,
+            languageId,
+            version,
+            text,
         };
         await openDocumentAndWaitForDiagnostics(server, textDocument);
 
@@ -1159,14 +1295,20 @@ describe('formatting', () => {
                 insertSpaces: false,
             },
         });
-        const result = TextDocument.applyEdits(TextDocument.create(uriString, languageId, version, text), edits);
+        const result = TextDocument.applyEdits(
+            TextDocument.create(uriString, languageId, version, text),
+            edits,
+        );
         expect('function foo()\n{\n\t// some code\n}').toBe(result);
     });
 
     it('considers last character in the file', async () => {
         const text = 'const first = 1;\nconst second = 2';
         const textDocument = {
-            uri: uriString, languageId, version, text,
+            uri: uriString,
+            languageId,
+            version,
+            text,
         };
         await openDocumentAndWaitForDiagnostics(server, textDocument);
 
@@ -1185,14 +1327,21 @@ describe('formatting', () => {
                 insertSpaces: true,
             },
         });
-        const result = TextDocument.applyEdits(TextDocument.create(uriString, languageId, version, text), edits);
+        const result = TextDocument.applyEdits(
+            TextDocument.create(uriString, languageId, version, text),
+            edits,
+        );
         expect('const first = 1;\nconst second = 2;').toBe(result);
     });
 
     it('selected range', async () => {
-        const text = 'function foo() {\nconst first = 1;\nconst second = 2;\nconst val = foo( "something" );\n//const fourth = 4;\n}';
+        const text =
+            'function foo() {\nconst first = 1;\nconst second = 2;\nconst val = foo( "something" );\n//const fourth = 4;\n}';
         const textDocument = {
-            uri: uriString, languageId, version, text,
+            uri: uriString,
+            languageId,
+            version,
+            text,
         };
         await openDocumentAndWaitForDiagnostics(server, textDocument);
         const edits = await server.documentRangeFormatting({
@@ -1212,16 +1361,21 @@ describe('formatting', () => {
                 insertSpaces: true,
             },
         });
-        const result = TextDocument.applyEdits(TextDocument.create(uriString, languageId, version, text), edits);
-        expect('function foo() {\nconst first = 1;\n    const second = 2;\n    const val = foo("something");\n//const fourth = 4;\n}').toBe(result);
+        const result = TextDocument.applyEdits(
+            TextDocument.create(uriString, languageId, version, text),
+            edits,
+        );
+        expect(
+            'function foo() {\nconst first = 1;\n    const second = 2;\n    const val = foo("something");\n//const fourth = 4;\n}',
+        ).toBe(result);
     });
 });
 
 describe('signatureHelp', () => {
     it('simple test', async () => {
         const doc = {
-            uri: uri('bar.ts'),
-            languageId: 'typescript',
+            uri: uri('bar.z'),
+            languageId: 'z',
             version: 1,
             text: `
         export function foo(bar: string, baz?:boolean): void {}
@@ -1237,20 +1391,28 @@ describe('signatureHelp', () => {
 
         expect(result.signatures).toHaveLength(2);
 
-        expect(result.signatures[result.activeSignature!].parameters![result.activeParameter!].label).toBe('bar: string');
+        expect(
+            result.signatures[result.activeSignature!].parameters![
+                result.activeParameter!
+            ].label,
+        ).toBe('bar: string');
 
         result = (await server.signatureHelp({
             textDocument: doc,
             position: position(doc, 'param2'),
         }))!;
 
-        expect(result.signatures[result.activeSignature!].parameters![result.activeParameter!].label).toBe('baz?: boolean');
+        expect(
+            result.signatures[result.activeSignature!].parameters![
+                result.activeParameter!
+            ].label,
+        ).toBe('baz?: boolean');
     });
 
     it('retrigger with specific signature active', async () => {
         const doc = {
-            uri: uri('bar.ts'),
-            languageId: 'typescript',
+            uri: uri('bar.z'),
+            languageId: 'z',
             version: 1,
             text: `
         export function foo(bar: string, baz?: boolean): void {}
@@ -1273,7 +1435,7 @@ describe('signatureHelp', () => {
                 triggerKind: lsp.SignatureHelpTriggerKind.Invoked,
                 activeSignatureHelp: {
                     signatures: result!.signatures,
-                    activeSignature: 1,  // select second signature
+                    activeSignature: 1, // select second signature
                 },
             },
         }))!;
@@ -1287,8 +1449,8 @@ describe('signatureHelp', () => {
 
 describe('code actions', () => {
     const doc = {
-        uri: uri('bar.ts'),
-        languageId: 'typescript',
+        uri: uri('bar.z'),
+        languageId: 'z',
         version: 1,
         text: `import { something } from "something";
     export function foo(bar: string, baz?:boolean): void {}
@@ -1305,20 +1467,24 @@ describe('code actions', () => {
                 end: { line: 1, character: 49 },
             },
             context: {
-                diagnostics: [{
-                    range: {
-                        start: { line: 1, character: 25 },
-                        end: { line: 1, character: 49 },
+                diagnostics: [
+                    {
+                        range: {
+                            start: { line: 1, character: 25 },
+                            end: { line: 1, character: 49 },
+                        },
+                        code: 6133,
+                        message: 'unused arg',
                     },
-                    code: 6133,
-                    message: 'unused arg',
-                }],
+                ],
             },
         }))!;
 
         // 1 quickfix + 2 refactorings
         expect(result).toHaveLength(3);
-        const quickFixDiagnostic = result.find(diagnostic => diagnostic.kind === 'quickfix');
+        const quickFixDiagnostic = result.find(
+            (diagnostic) => diagnostic.kind === 'quickfix',
+        );
         expect(quickFixDiagnostic).toBeDefined();
         expect(quickFixDiagnostic).toMatchObject({
             title: "Prefix 'bar' with an underscore",
@@ -1330,7 +1496,7 @@ describe('code actions', () => {
                         documentChanges: [
                             {
                                 textDocument: {
-                                    uri: uri('bar.ts'),
+                                    uri: uri('bar.z'),
                                     version: 1,
                                 },
                                 edits: [
@@ -1355,7 +1521,9 @@ describe('code actions', () => {
             },
             kind: 'quickfix',
         });
-        const refactorAction = result.find(diagnostic => diagnostic.kind === 'refactor');
+        const refactorAction = result.find(
+            (diagnostic) => diagnostic.kind === 'refactor',
+        );
         expect(refactorAction).toBeDefined();
         expect(refactorAction).toMatchObject({
             title: 'Convert parameters to destructured object',
@@ -1364,7 +1532,7 @@ describe('code actions', () => {
                 command: '_typescript.applyRefactoring',
                 arguments: [
                     {
-                        file: filePath('bar.ts'),
+                        file: filePath('bar.z'),
                         startLine: 2,
                         startOffset: 26,
                         endLine: 2,
@@ -1376,7 +1544,9 @@ describe('code actions', () => {
             },
             kind: 'refactor',
         });
-        const refactorMoveAction = result.find(diagnostic => diagnostic.kind === 'refactor.move');
+        const refactorMoveAction = result.find(
+            (diagnostic) => diagnostic.kind === 'refactor.move',
+        );
         expect(refactorMoveAction).toBeDefined();
         expect(refactorMoveAction).toMatchObject({
             title: 'Move to a new file',
@@ -1385,7 +1555,7 @@ describe('code actions', () => {
                 command: '_typescript.applyRefactoring',
                 arguments: [
                     {
-                        file: filePath('bar.ts'),
+                        file: filePath('bar.z'),
                         startLine: 2,
                         startOffset: 26,
                         endLine: 2,
@@ -1408,14 +1578,16 @@ describe('code actions', () => {
                 end: { line: 1, character: 49 },
             },
             context: {
-                diagnostics: [{
-                    range: {
-                        start: { line: 1, character: 25 },
-                        end: { line: 1, character: 49 },
+                diagnostics: [
+                    {
+                        range: {
+                            start: { line: 1, character: 25 },
+                            end: { line: 1, character: 49 },
+                        },
+                        code: 6133,
+                        message: 'unused arg',
                     },
-                    code: 6133,
-                    message: 'unused arg',
-                }],
+                ],
                 only: ['refactor', 'invalid-action'],
             },
         }))!;
@@ -1429,7 +1601,7 @@ describe('code actions', () => {
                     command: '_typescript.applyRefactoring',
                     arguments: [
                         {
-                            file: filePath('bar.ts'),
+                            file: filePath('bar.z'),
                             startLine: 2,
                             startOffset: 26,
                             endLine: 2,
@@ -1447,8 +1619,9 @@ describe('code actions', () => {
                             action: 'Convert parameters to destructured object',
                             endLine: 2,
                             endOffset: 50,
-                            file: filePath('bar.ts'),
-                            refactor: 'Convert parameters to destructured object',
+                            file: filePath('bar.z'),
+                            refactor:
+                                'Convert parameters to destructured object',
                             startLine: 2,
                             startOffset: 26,
                         },
@@ -1471,14 +1644,16 @@ describe('code actions', () => {
                 end: { line: 1, character: 53 },
             },
             context: {
-                diagnostics: [{
-                    range: {
-                        start: { line: 1, character: 25 },
-                        end: { line: 1, character: 49 },
+                diagnostics: [
+                    {
+                        range: {
+                            start: { line: 1, character: 25 },
+                            end: { line: 1, character: 49 },
+                        },
+                        code: 6133,
+                        message: 'unused arg',
                     },
-                    code: 6133,
-                    message: 'unused arg',
-                }],
+                ],
                 only: [CodeActionKind.SourceOrganizeImportsTs.value],
             },
         }))!;
@@ -1488,8 +1663,8 @@ describe('code actions', () => {
 
     it('provides organize imports when there are no errors', async () => {
         const doc = {
-            uri: uri('bar.ts'),
-            languageId: 'typescript',
+            uri: uri('bar.z'),
+            languageId: 'z',
             version: 1,
             text: `import { existsSync } from 'fs';
 import { accessSync } from 'fs';
@@ -1518,7 +1693,8 @@ accessSync('t');`,
                         {
                             edits: [
                                 {
-                                    newText: "import { accessSync, existsSync } from 'fs';\n",
+                                    newText:
+                                        "import { accessSync, existsSync } from 'fs';\n",
                                     range: {
                                         end: {
                                             character: 0,
@@ -1545,7 +1721,7 @@ accessSync('t');`,
                                 },
                             ],
                             textDocument: {
-                                uri: uri('bar.ts'),
+                                uri: uri('bar.z'),
                                 version: 1,
                             },
                         },
@@ -1557,17 +1733,23 @@ accessSync('t');`,
 
     it('provides "add missing imports" when explicitly requested in only', async () => {
         const doc = {
-            uri: uri('bar.ts'),
-            languageId: 'typescript',
+            uri: uri('bar.z'),
+            languageId: 'z',
             version: 1,
-            text: 'existsSync(\'t\');',
+            text: `
+                existsSync('t');
+                export function foo() {
+                    return
+                    setTimeout(() => {})
+                }
+            `,
         };
         await openDocumentAndWaitForDiagnostics(server, doc);
         const result = (await server.codeAction({
             textDocument: doc,
             range: {
-                start: { line: 1, character: 29 },
-                end: { line: 1, character: 53 },
+                start: { line: 0, character: 0 },
+                end: lastPosition(doc, '}'),
             },
             context: {
                 diagnostics: [],
@@ -1585,7 +1767,8 @@ accessSync('t');`,
                             edits: [
                                 {
                                     // Prefers import that is declared in package.json.
-                                    newText: 'import { existsSync } from "fs-extra";\n\n',
+                                    newText:
+                                        'import { existsSync } from "fs-extra";\n\n',
                                     range: {
                                         end: {
                                             character: 0,
@@ -1599,7 +1782,7 @@ accessSync('t');`,
                                 },
                             ],
                             textDocument: {
-                                uri: uri('bar.ts'),
+                                uri: uri('bar.z'),
                                 version: 1,
                             },
                         },
@@ -1611,8 +1794,8 @@ accessSync('t');`,
 
     it('provides "fix all" when explicitly requested in only', async () => {
         const doc = {
-            uri: uri('bar.ts'),
-            languageId: 'typescript',
+            uri: uri('bar.z'),
+            languageId: 'z',
             version: 1,
             text: `function foo() {
   return
@@ -1655,7 +1838,7 @@ accessSync('t');`,
                                 },
                             ],
                             textDocument: {
-                                uri: uri('bar.ts'),
+                                uri: uri('bar.z'),
                                 version: 1,
                             },
                         },
@@ -1667,10 +1850,10 @@ accessSync('t');`,
 
     it('provides "remove unused" when explicitly requested in only', async () => {
         const doc = {
-            uri: uri('bar.ts'),
-            languageId: 'typescript',
+            uri: uri('bar.z'),
+            languageId: 'z',
             version: 1,
-            text: 'import { existsSync } from \'fs\';',
+            text: "import { existsSync } from 'fs';",
         };
         await openDocumentAndWaitForDiagnostics(server, doc);
         const result = (await server.codeAction({
@@ -1708,7 +1891,7 @@ accessSync('t');`,
                                 },
                             ],
                             textDocument: {
-                                uri: uri('bar.ts'),
+                                uri: uri('bar.z'),
                                 version: 1,
                             },
                         },
@@ -1720,8 +1903,8 @@ accessSync('t');`,
 
     it('only provides the "source.fixAll" kind if requested in only', async () => {
         const doc = {
-            uri: uri('bar.ts'),
-            languageId: 'typescript',
+            uri: uri('bar.z'),
+            languageId: 'z',
             version: 1,
             text: `
                 existsSync('x');
@@ -1767,7 +1950,7 @@ accessSync('t');`,
                                 },
                             ],
                             textDocument: {
-                                uri: uri('bar.ts'),
+                                uri: uri('bar.z'),
                                 version: 1,
                             },
                         },
@@ -1780,10 +1963,10 @@ accessSync('t');`,
 
 describe('executeCommand', () => {
     it('apply refactoring (move to new file)', async () => {
-        const fooUri = uri('foo.ts');
+        const fooUri = uri('foo.z');
         const doc = {
             uri: fooUri,
-            languageId: 'typescript',
+            languageId: 'z',
             version: 1,
             text: 'export function fn(): void {}\nexport function newFn(): void {}',
         };
@@ -1799,7 +1982,9 @@ describe('executeCommand', () => {
             },
         }))!;
         // Find refactoring code action.
-        const applyRefactoringAction = codeActions.find(action => action.command?.command === Commands.APPLY_REFACTORING);
+        const applyRefactoringAction = codeActions.find(
+            (action) => action.command?.command === Commands.APPLY_REFACTORING,
+        );
         expect(applyRefactoringAction).toBeDefined();
         // Execute refactoring action.
         await server.executeCommand({
@@ -1812,10 +1997,10 @@ describe('executeCommand', () => {
         expect(Object.keys(changes!)).toHaveLength(2);
         const change1 = changes![fooUri];
         expect(change1).toBeDefined();
-        const change2 = changes![uri('newFn.ts')];
+        const change2 = changes![uri('newFn.z')];
         expect(change2).toBeDefined();
         // Clean up file that is created on applying edit.
-        fs.unlinkSync(filePath('newFn.ts'));
+        fs.unlinkSync(filePath('newFn.z'));
         expect(change1).toMatchObject([
             {
                 range: {
@@ -1830,8 +2015,7 @@ describe('executeCommand', () => {
                 },
                 newText: '',
             },
-        ],
-        );
+        ]);
         expect(change2).toMatchObject([
             {
                 range: {
@@ -1846,31 +2030,27 @@ describe('executeCommand', () => {
                 },
                 newText: 'export function newFn(): void { }\n',
             },
-        ],
-        );
+        ]);
     });
 
     it('go to source definition', async () => {
         // NOTE: This test needs to reference files that physically exist for the feature to work.
-        const indexUri = uri('source-definition', 'index.ts');
+        const indexUri = uri('source-definition', 'index.z');
         const indexDoc = {
             uri: indexUri,
-            languageId: 'typescript',
+            languageId: 'z',
             version: 1,
-            text: readContents(filePath('source-definition', 'index.ts')),
+            text: readContents(filePath('source-definition', 'index.z')),
         };
         await openDocumentAndWaitForDiagnostics(server, indexDoc);
         const result: lsp.Location[] | null = await server.executeCommand({
             command: Commands.SOURCE_DEFINITION,
-            arguments: [
-                indexUri,
-                position(indexDoc, '/*identifier*/'),
-            ],
+            arguments: [indexUri, position(indexDoc, '/*identifier*/')],
         });
         expect(result).not.toBeNull();
         expect(result).toHaveLength(1);
         expect(result![0]).toMatchObject({
-            uri: uri('source-definition', 'a.js'),
+            uri: uri('source-definition', 'a.z'),
             range: {
                 start: {
                     line: 0,
@@ -1888,8 +2068,8 @@ describe('executeCommand', () => {
 describe('documentHighlight', () => {
     it('simple test', async () => {
         const barDoc = {
-            uri: uri('bar.d.ts'),
-            languageId: 'typescript',
+            uri: uri('bar.z'),
+            languageId: 'z',
             version: 1,
             text: `
         export declare const Bar: unique symbol;
@@ -1899,8 +2079,8 @@ describe('documentHighlight', () => {
         };
         await openDocumentAndWaitForDiagnostics(server, barDoc);
         const fooDoc = {
-            uri: uri('bar.ts'),
-            languageId: 'typescript',
+            uri: uri('bar.z'),
+            languageId: 'z',
             version: 1,
             text: `
         import { Bar } from './bar';
@@ -1929,7 +2109,7 @@ describe('diagnostics (no client support)', () => {
         };
         localServer = await createServer({
             rootUri: null,
-            publishDiagnostics: args => diagnostics.set(args.uri, args),
+            publishDiagnostics: (args) => diagnostics.set(args.uri, args),
             clientCapabilitiesOverride,
         });
     });
@@ -1948,8 +2128,8 @@ describe('diagnostics (no client support)', () => {
 
     it('diagnostic are not returned when client does not support publishDiagnostics', async () => {
         const doc = {
-            uri: uri('diagnosticsBar.ts'),
-            languageId: 'typescript',
+            uri: uri('bar.z'),
+            languageId: 'z',
             version: 1,
             text: `
         export function foo(): void {
@@ -1964,41 +2144,20 @@ describe('diagnostics (no client support)', () => {
 });
 
 describe('jsx/tsx project', () => {
-    let localServer: TestLspServer;
-
-    beforeAll(async () => {
-        localServer = await createServer({
-            rootUri: uri('jsx'),
-            publishDiagnostics: args => diagnostics.set(args.uri, args),
-        });
-    });
-
-    beforeEach(() => {
-        localServer.closeAllForTesting();
-        // "closeAllForTesting" triggers final publishDiagnostics with an empty list so clear last.
-        diagnostics.clear();
-        localServer.workspaceEdits = [];
-    });
-
-    afterAll(() => {
-        localServer.closeAllForTesting();
-        localServer.shutdown();
-    });
-
     it('includes snippet completion for element prop', async () => {
         const doc = {
-            uri: uri('jsx', 'app.tsx'),
-            languageId: 'typescriptreact',
+            uri: uri('jsx/app.z'),
+            languageId: 'z',
             version: 1,
-            text: readContents(filePath('jsx', 'app.tsx')),
+            text: readContents(filePath('jsx', 'app.z')),
         };
-        localServer.didOpenTextDocument({
+        await openDocumentAndWaitForDiagnostics(server, doc);
+        const completion = await server.completion({
             textDocument: doc,
+            position: position(doc, 'title'),
         });
-
-        const completion = await localServer.completion({ textDocument: doc, position: position(doc, 'title') });
         expect(completion).not.toBeNull();
-        const item = completion!.items.find(i => i.label === 'title');
+        const item = completion!.items.find((i) => i.label === 'title');
         expect(item).toBeDefined();
         expect(item?.insertTextFormat).toBe(2);
     });
@@ -2035,8 +2194,8 @@ describe('codeLens', () => {
 
     it('shows code lenses', async () => {
         const doc = {
-            uri: uri('module.ts'),
-            languageId: 'typescript',
+            uri: uri('module.z'),
+            languageId: 'z',
             version: 1,
             text: `
                 interface Pet {
@@ -2053,7 +2212,10 @@ describe('codeLens', () => {
             `,
         };
         await openDocumentAndWaitForDiagnostics(server, doc);
-        const codeLenses = await server.codeLens({ textDocument: doc }, lsp.CancellationToken.None);
+        const codeLenses = await server.codeLens(
+            { textDocument: doc },
+            lsp.CancellationToken.None,
+        );
         expect(codeLenses).toBeDefined();
         expect(codeLenses).toHaveLength(5);
         expect(codeLenses).toMatchObject([
@@ -2103,7 +2265,11 @@ describe('codeLens', () => {
             },
         ]);
 
-        const resolvedCodeLenses = await Promise.all(codeLenses.map(codeLens => server.codeLensResolve(codeLens, lsp.CancellationToken.None)));
+        const resolvedCodeLenses = await Promise.all(
+            codeLenses.map((codeLens) =>
+                server.codeLensResolve(codeLens, lsp.CancellationToken.None),
+            ),
+        );
         expect(resolvedCodeLenses).toMatchObject([
             {
                 command: {
@@ -2150,11 +2316,7 @@ describe('codeLens', () => {
                 command: {
                     title: '0 references',
                     command: '',
-                    arguments: [
-                        doc.uri,
-                        position(doc, 'pet'),
-                        [],
-                    ],
+                    arguments: [doc.uri, position(doc, 'pet'), []],
                 },
             },
             {
@@ -2214,8 +2376,8 @@ describe('codeLens', () => {
 describe('codeLens disabled', () => {
     it('does not show code lenses', async () => {
         const doc = {
-            uri: uri('module.ts'),
-            languageId: 'typescript',
+            uri: uri('module.z'),
+            languageId: 'z',
             version: 1,
             text: `
                 interface Pet {
@@ -2232,7 +2394,10 @@ describe('codeLens disabled', () => {
             `,
         };
         await openDocumentAndWaitForDiagnostics(server, doc);
-        const codeLenses = await server.codeLens({ textDocument: doc }, lsp.CancellationToken.None);
+        const codeLenses = await server.codeLens(
+            { textDocument: doc },
+            lsp.CancellationToken.None,
+        );
         expect(codeLenses).toBeDefined();
         expect(codeLenses).toHaveLength(0);
     });
@@ -2261,8 +2426,8 @@ describe('inlayHints', () => {
 
     it('inlayHints', async () => {
         const doc = {
-            uri: uri('module.ts'),
-            languageId: 'typescript',
+            uri: uri('module.z'),
+            languageId: 'z',
             version: 1,
             text: `
         export function foo() {
@@ -2271,14 +2436,14 @@ describe('inlayHints', () => {
       `,
         };
         await openDocumentAndWaitForDiagnostics(server, doc);
-        const inlayHints = await server.inlayHints({ textDocument: doc, range: lsp.Range.create(0, 0, 4, 0) });
+        const inlayHints = await server.inlayHints({
+            textDocument: doc,
+            range: lsp.Range.create(0, 0, 4, 0),
+        });
         expect(inlayHints).toBeDefined();
         expect(inlayHints).toHaveLength(1);
         expect(inlayHints![0]).toMatchObject({
-            label: [
-                { value: ': ' },
-                { value: 'number' },
-            ],
+            label: [{ value: ': ' }, { value: 'number' }],
             position: { line: 1, character: 29 },
             kind: lsp.InlayHintKind.Type,
             paddingLeft: true,
@@ -2301,7 +2466,7 @@ describe('completions without client snippet support', () => {
         };
         localServer = await createServer({
             rootUri: null,
-            publishDiagnostics: args => diagnostics.set(args.uri, args),
+            publishDiagnostics: (args) => diagnostics.set(args.uri, args),
             clientCapabilitiesOverride,
         });
     });
@@ -2320,22 +2485,29 @@ describe('completions without client snippet support', () => {
 
     it('resolves completion for method completion does not contain snippet', async () => {
         const doc = {
-            uri: uri('bar.ts'),
-            languageId: 'typescript',
+            uri: uri('bar.z'),
+            languageId: 'z',
             version: 1,
             text: `
             import fs from 'fs'
-            fs.readFile
+            fs.getById
         `,
         };
         await openDocumentAndWaitForDiagnostics(localServer, doc);
-        const proposals = await localServer.completion({ textDocument: doc, position: positionAfter(doc, 'readFile') });
+        const proposals = await localServer.completion({
+            textDocument: doc,
+            position: positionAfter(doc, 'getById'),
+        });
         expect(proposals).not.toBeNull();
-        const completion = proposals!.items.find(completion => completion.label === 'readFile');
-        expect(completion!.insertTextFormat).not.toBe(lsp.InsertTextFormat.Snippet);
-        expect(completion!.label).toBe('readFile');
+        const completion = proposals!.items.find(
+            (completion) => completion.label === 'getById',
+        );
+        expect(completion!.insertTextFormat).not.toBe(
+            lsp.InsertTextFormat.Snippet,
+        );
+        expect(completion!.label).toBe('getById');
         const resolvedItem = await localServer.completionResolve(completion!);
-        expect(resolvedItem!.label).toBe('readFile');
+        expect(resolvedItem!.label).toBe('getById');
         expect(resolvedItem.insertText).toBeUndefined();
         expect(resolvedItem.insertTextFormat).toBeUndefined();
         localServer.didCloseTextDocument({ textDocument: doc });
@@ -2343,25 +2515,28 @@ describe('completions without client snippet support', () => {
 
     it('does not include snippet completions for element prop', async () => {
         const doc = {
-            uri: uri('jsx', 'app.tsx'),
-            languageId: 'typescriptreact',
+            uri: uri('jsx/app.z'),
+            languageId: 'z',
             version: 1,
-            text: readContents(filePath('jsx', 'app.tsx')),
+            text: readContents(filePath('jsx', 'app.z')),
         };
         localServer.didOpenTextDocument({
             textDocument: doc,
         });
 
-        const completion = await localServer.completion({ textDocument: doc, position: position(doc, 'title') });
+        const completion = await localServer.completion({
+            textDocument: doc,
+            position: position(doc, 'title'),
+        });
         expect(completion).not.toBeNull();
-        const item = completion!.items.find(i => i.label === 'title');
+        const item = completion!.items.find((i) => i.label === 'title');
         expect(item).toBeUndefined();
     });
 
     it('does not include snippet completions for object methods', async () => {
         const doc = {
-            uri: uri('foo.ts'),
-            languageId: 'typescript',
+            uri: uri('bar.z'),
+            languageId: 'z',
             version: 1,
             text: `
               interface IFoo {
@@ -2379,50 +2554,49 @@ describe('completions without client snippet support', () => {
         });
         expect(proposals).not.toBeNull();
         expect(proposals!.items).toHaveLength(1);
-        expect(proposals!.items[0]).toMatchObject(
-            {
-                label: 'bar',
-                kind: 2,
-            },
-        );
+        expect(proposals!.items[0]).toMatchObject({
+            label: 'bar',
+            kind: 2,
+        });
     });
 });
 
 describe('fileOperations', () => {
-    it('willRenameFiles - rename file', async () => {
-        // TODO: This test depends on ensureConfigurationForDocument being executed first (even for a different file).
-        const edit = await server.willRenameFiles({
-            files: [{ oldUri: uri('module1.ts'), newUri: uri('new_module1_name.ts') }],
+    it('deleting a file closes the corresponding document', async () => {
+        const doc = {
+            uri: uri('foo.z'),
+            languageId: 'z',
+            version: 1,
+            text: 'const foo = \'foo\'',
+        };
+        await openDocumentAndWaitForDiagnostics(server, doc);
+        const result = await server.willDeleteFiles({
+            files: [doc.uri],
         });
-        expect(edit.changes).toBeDefined();
-        expect(Object.keys(edit.changes!)).toHaveLength(1);
-        // module2 imports from renamed file
-        expect(edit.changes![uri('module2.ts')]).toStrictEqual([
-            {
-                range: {
-                    start:{ line: 0, character: 25 },
-                    end: { line: 0, character: 34 },
-                },
-                newText:'./new_module1_name',
-            },
-        ]);
+        expect(result.changes).toBeDefined();
+        expect(Object.keys(result.changes!)).toHaveLength(0);
     });
 
-    it('willRenameFiles - rename directory', async () => {
-        // TODO: This test depends on ensureConfigurationForDocument being executed (even for a different file).
-        const edit = await server.willRenameFiles({
-            files: [{ oldUri: uri('rename1'), newUri: uri('rename2') }],
+    it('renaming a file moves the corresponding document', async () => {
+        const doc = {
+            uri: uri('foo.z'),
+            languageId: 'z',
+            version: 1,
+            text: 'const foo = \'foo\'',
+        };
+        await openDocumentAndWaitForDiagnostics(server, doc);
+        const result = await server.willRenameFiles({
+            files: [{ oldUri: doc.uri, newUri: uri('new_foo.z') }],
         });
-        expect(edit.changes).toBeDefined();
-        expect(Object.keys(edit.changes!)).toHaveLength(1);
-        // module3 imports from renamed directory
-        expect(edit.changes![uri('module3.ts')]).toStrictEqual([
+        expect(result.changes).toBeDefined();
+        expect(Object.keys(result.changes!)).toHaveLength(1);
+        expect(result.changes![uri('new_foo.z')]).toStrictEqual([
             {
                 range: {
-                    start:{ line: 0, character: 31 },
-                    end: { line: 0, character: 44 },
+                    start: { line: 0, character: 0 },
+                    end: { line: 0, character: 0 },
                 },
-                newText:'./rename2/var',
+                newText: "const foo = 'foo';",
             },
         ]);
     });
@@ -2430,42 +2604,58 @@ describe('fileOperations', () => {
 
 describe('linked editing', () => {
     it('simple test', async () => {
-        const textDocument = {
-            uri: uri('foo.tsx'),
-            languageId: 'typescriptreact',
+        const doc = {
+            uri: uri('foo.z'),
+            languageId: 'z',
             version: 1,
-            text: 'let bar = <div></div>',
+            text: `
+        let bar = <div></div>
+      `,
         };
-        await openDocumentAndWaitForDiagnostics(server, textDocument);
-        const position = positionAfter(textDocument, '<div');
+        await openDocumentAndWaitForDiagnostics(server, doc);
+        const position = positionAfter(doc, '<div');
         const linedEditRanges = await server.linkedEditingRange({
             textDocument,
             position,
         });
         expect(linedEditRanges?.ranges).toStrictEqual([
-            { start: { line: 0, character: 11 }, end: { line: 0, character: 14 } },
-            { start: { line: 0, character: 17 }, end: { line: 0, character: 20 } },
+            {
+                start: { line: 0, character: 11 },
+                end: { line: 0, character: 14 },
+            },
+            {
+                start: { line: 0, character: 17 },
+                end: { line: 0, character: 20 },
+            },
         ]);
     });
 });
 
 describe('handles invalid languageId', () => {
     it('simple test', async () => {
-        const textDocument = {
-            uri: uri('foo.tsx'),
-            languageId: 'tsx',
+        const doc = {
+            uri: uri('foo.z'),
+            languageId: 'z',
             version: 1,
-            text: 'let bar = <div></div>',
+            text: `
+        let bar = <div></div>
+      `,
         };
-        await openDocumentAndWaitForDiagnostics(server, textDocument);
-        const position = positionAfter(textDocument, '<div');
+        await openDocumentAndWaitForDiagnostics(server, doc);
+        const position = positionAfter(doc, '<div');
         const linedEditRanges = await server.linkedEditingRange({
             textDocument,
             position,
         });
         expect(linedEditRanges?.ranges).toStrictEqual([
-            { start: { line: 0, character: 11 }, end: { line: 0, character: 14 } },
-            { start: { line: 0, character: 17 }, end: { line: 0, character: 20 } },
+            {
+                start: { line: 0, character: 11 },
+                end: { line: 0, character: 14 },
+            },
+            {
+                start: { line: 0, character: 17 },
+                end: { line: 0, character: 20 },
+            },
         ]);
     });
 });

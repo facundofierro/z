@@ -2,7 +2,7 @@
   "name": "z-language",
   "displayName": "Z Language Support",
   "description": "Enterprise-grade language support for Z Language with registry-driven validation and multi-target compilation",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "publisher": "z-language",
   "license": "MIT",
   "repository": {

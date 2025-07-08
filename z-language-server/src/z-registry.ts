@@ -1,18 +1,18 @@
-import { readFileSync, existsSync } from "node:fs";
-import { join, dirname } from "node:path";
-import { fileURLToPath } from "node:url";
+import { readFileSync, existsSync } from 'node:fs';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 export interface ScaffoldingConfig {
     fileExtension?: string;
     fileExtensions?: Record<string, string>;
-    parseMode?: "code" | "markup";
-    parseModes?: Record<string, "code" | "markup">;
+    parseMode?: 'code' | 'markup';
+    parseModes?: Record<string, 'code' | 'markup'>;
     directoryNesting: boolean;
 }
 
 export interface TargetInfo {
     description: string;
-    mode: "markup" | "code";
+    mode: 'markup' | 'code';
     allowedChildren: string[];
     defaultPackages: Record<string, string>;
     compiler: string;
@@ -22,7 +22,7 @@ export interface NamespaceInfo {
     aliasOf: string;
     description: string;
     childType?: string;
-    childMode?: "single" | "multiple";
+    childMode?: 'single' | 'multiple';
     allowedChildren?: string[];
     role?: string;
     scaffolding?: ScaffoldingConfig;
@@ -30,7 +30,7 @@ export interface NamespaceInfo {
 
 export interface ChildTypeInfo {
     description: string;
-    parseMode: "code" | "markup";
+    parseMode: 'code' | 'markup';
     fileExtension: string | null;
     allowsNesting: boolean;
     scaffoldingType: string;
@@ -42,11 +42,11 @@ export interface Registry {
     targets: Record<string, TargetInfo>;
     namespaces: Record<string, NamespaceInfo>;
     annotations: Record<
-        string,
-        {
-            description: string;
-            usage: string;
-        }
+    string,
+    {
+        description: string;
+        usage: string;
+    }
     >;
     childTypes?: Record<string, ChildTypeInfo>;
 }
@@ -62,7 +62,7 @@ export interface ScaffoldRequest {
 export interface ScaffoldResult {
     filePath: string;
     content: string;
-    parseMode: "code" | "markup";
+    parseMode: 'code' | 'markup';
     shouldCreateDirectory: boolean;
 }
 
@@ -76,17 +76,17 @@ export function loadRegistry(): Registry {
     // Try to find registry.json relative to workspace or fallback to embedded
     const possiblePaths = [
         // Relative to workspace root
-        "./compiler/stdlib/registry.json",
+        './compiler/stdlib/registry.json',
         // Relative to LSP directory
-        "../compiler/stdlib/registry.json",
+        '../compiler/stdlib/registry.json',
         // Embedded fallback
-        join(dirname(fileURLToPath(import.meta.url)), "embedded-registry.json"),
+        join(dirname(fileURLToPath(import.meta.url)), 'embedded-registry.json'),
     ];
 
     for (const registryPath of possiblePaths) {
         try {
             if (existsSync(registryPath)) {
-                const content = readFileSync(registryPath, "utf8");
+                const content = readFileSync(registryPath, 'utf8');
                 const registry = JSON.parse(content) as Registry;
                 cachedRegistry = registry;
                 return registry;
@@ -96,7 +96,7 @@ export function loadRegistry(): Registry {
         }
     }
 
-    throw new Error("Could not load Z language registry");
+    throw new Error('Could not load Z language registry');
 }
 
 export function getTargetCompletions(): Array<{
@@ -128,21 +128,21 @@ export function getChildTypeInfo(childType: string): ChildTypeInfo | null {
 
 export function validateChild(
     parentTarget: string,
-    childName: string
+    childName: string,
 ): boolean {
     const allowedChildren = getChildrenForTarget(parentTarget);
-    return allowedChildren.includes("*") || allowedChildren.includes(childName);
+    return allowedChildren.includes('*') || allowedChildren.includes(childName);
 }
 
 export function getScaffoldingConfig(
-    namespaceName: string
+    namespaceName: string,
 ): ScaffoldingConfig | null {
     const namespaceInfo = getNamespaceInfo(namespaceName);
     return namespaceInfo?.scaffolding || null;
 }
 
 export function generateScaffoldedFile(
-    request: ScaffoldRequest
+    request: ScaffoldRequest,
 ): ScaffoldResult {
     const namespaceInfo = getNamespaceInfo(request.parentType);
     if (!namespaceInfo) {
@@ -152,30 +152,30 @@ export function generateScaffoldedFile(
     const scaffolding = namespaceInfo.scaffolding;
     if (!scaffolding) {
         throw new Error(
-            `No scaffolding configuration for: ${request.parentType}`
+            `No scaffolding configuration for: ${request.parentType}`,
         );
     }
 
     // Determine child type and file extension
     let childType: string;
     let fileExtension: string;
-    let parseMode: "code" | "markup";
+    let parseMode: 'code' | 'markup';
 
-    if (namespaceInfo.childMode === "single") {
+    if (namespaceInfo.childMode === 'single') {
         // Single type children - use the default child type
-        childType = namespaceInfo.childType || "component";
-        fileExtension = scaffolding.fileExtension || ".z";
-        parseMode = scaffolding.parseMode || "code";
+        childType = namespaceInfo.childType || 'component';
+        fileExtension = scaffolding.fileExtension || '.z';
+        parseMode = scaffolding.parseMode || 'code';
     } else {
         // Multiple type children - use explicit child type
         if (!request.childType) {
             throw new Error(
-                "Child type must be specified for multiple-type parents"
+                'Child type must be specified for multiple-type parents',
             );
         }
         childType = request.childType;
-        fileExtension = scaffolding.fileExtensions?.[childType] || ".z";
-        parseMode = scaffolding.parseModes?.[childType] || "code";
+        fileExtension = scaffolding.fileExtensions?.[childType] || '.z';
+        parseMode = scaffolding.parseModes?.[childType] || 'code';
     }
 
     // Generate file path
@@ -187,8 +187,8 @@ export function generateScaffoldedFile(
     const content = generateTemplateContent(
         childType,
         request.childName,
-        childTypeInfo?.scaffoldingType || "basic",
-        parseMode
+        childTypeInfo?.scaffoldingType || 'basic',
+        parseMode,
     );
 
     return {
@@ -205,24 +205,24 @@ function generateTemplateContent(
     childType: string,
     childName: string,
     scaffoldingType: string,
-    parseMode: "code" | "markup"
+    parseMode: 'code' | 'markup',
 ): string {
     switch (scaffoldingType) {
-        case "tsx-like":
+        case 'tsx-like':
             return generateTsxLikeTemplate(childName, childType);
-        case "field-list":
+        case 'field-list':
             return generateFieldListTemplate(childName);
-        case "value-list":
+        case 'value-list':
             return generateValueListTemplate(childName);
-        case "properties-only":
+        case 'properties-only':
             return generatePropertiesTemplate(childName);
-        case "class-based":
+        case 'class-based':
             return generateClassTemplate(childName);
-        case "type-definition":
+        case 'type-definition':
             return generateTypeTemplate(childName);
-        case "interface-definition":
+        case 'interface-definition':
             return generateInterfaceTemplate(childName);
-        case "function-definition":
+        case 'function-definition':
             return generateFunctionTemplate(childName);
         default:
             return generateBasicTemplate(childName, parseMode);
@@ -230,7 +230,7 @@ function generateTemplateContent(
 }
 
 function generateTsxLikeTemplate(name: string, type: string): string {
-    if (type === "route") {
+    if (type === 'route') {
         return `@doc('${name} route')
 @context('Auto-generated ${type} for ${name}')
 
@@ -350,9 +350,9 @@ export function ${name}(input) {
 
 function generateBasicTemplate(
     name: string,
-    parseMode: "code" | "markup"
+    parseMode: 'code' | 'markup',
 ): string {
-    if (parseMode === "markup") {
+    if (parseMode === 'markup') {
         return `@doc('${name}')
 @context('Auto-generated ${name}')
 
@@ -388,7 +388,7 @@ export function getScaffoldingOptionsForParent(parentType: string): {
     }
 
     return {
-        allowsMultipleTypes: namespaceInfo.childMode === "multiple",
+        allowsMultipleTypes: namespaceInfo.childMode === 'multiple',
         defaultChildType: namespaceInfo.childType,
         allowedChildTypes: namespaceInfo.allowedChildren || [],
         directoryNesting: namespaceInfo.scaffolding?.directoryNesting || false,

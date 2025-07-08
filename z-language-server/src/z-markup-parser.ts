@@ -1,11 +1,11 @@
-import { DiagnosticSeverity } from "vscode-languageserver";
-import { loadRegistry } from "./z-registry.js";
+import { DiagnosticSeverity } from 'vscode-languageserver';
+import { loadRegistry } from './z-registry.js';
 
 export interface MarkupDiagnostic {
     severity: DiagnosticSeverity;
     range: {
-        start: { line: number; character: number };
-        end: { line: number; character: number };
+        start: { line: number; character: number; };
+        end: { line: number; character: number; };
     };
     message: string;
     source: string;
@@ -15,7 +15,7 @@ interface ValidationContext {
     elementType: string;
     elementName: string;
     allowedChildren: string[];
-    mode: "markup" | "code";
+    mode: 'markup' | 'code';
     line: number;
 }
 
@@ -54,19 +54,19 @@ export class ZMarkupParser {
         const trimmedLine = line.trim();
 
         // Skip empty lines and comments
-        if (!trimmedLine || trimmedLine.startsWith("//")) {
+        if (!trimmedLine || trimmedLine.startsWith('//')) {
             return;
         }
 
         // Check for closing braces
-        if (trimmedLine === "}") {
+        if (trimmedLine === '}') {
             this.popContext();
             return;
         }
 
         // Parse element declaration: "keyword Name {" or "keyword Name"
         const elementMatch = line.match(
-            /^(\s*)([a-zA-Z][a-zA-Z0-9_]*)\s+([a-zA-Z][a-zA-Z0-9_-]*)\s*(\{?)(.*)$/
+            /^(\s*)([a-zA-Z][a-zA-Z0-9_]*)\s+([a-zA-Z][a-zA-Z0-9_-]*)\s*(\{?)(.*)$/,
         );
 
         if (elementMatch) {
@@ -84,7 +84,7 @@ export class ZMarkupParser {
             this.validateElement(element, indentLevel);
 
             // If opening brace, push context
-            if (openBrace === "{") {
+            if (openBrace === '{') {
                 this.pushContext(keyword, name, lineNumber);
             }
             return;
@@ -92,13 +92,13 @@ export class ZMarkupParser {
 
         // Parse simple child elements: "  childName" or dynamic routes "[slug]"
         const childMatch = line.match(
-            /^(\s+)([a-zA-Z][a-zA-Z0-9_]*|\[[a-zA-Z][a-zA-Z0-9_]*\])\s*(\{?)(.*)$/
+            /^(\s+)([a-zA-Z][a-zA-Z0-9_]*|\[[a-zA-Z][a-zA-Z0-9_]*\])\s*(\{?)(.*)$/,
         );
         if (childMatch) {
             const [, indent, childName, openBrace] = childMatch;
 
             // Clean up dynamic route syntax
-            const cleanChildName = childName.replace(/^\[|\]$/g, "");
+            const cleanChildName = childName.replace(/^\[|\]$/g, '');
 
             const element: ParsedElement = {
                 keyword: cleanChildName,
@@ -111,7 +111,7 @@ export class ZMarkupParser {
             this.validateChild(element);
 
             // If this child has opening brace, it becomes a context
-            if (openBrace === "{") {
+            if (openBrace === '{') {
                 this.pushContext(cleanChildName, cleanChildName, lineNumber);
             }
             return;
@@ -119,7 +119,7 @@ export class ZMarkupParser {
 
         // Parse namespace declaration: "  Namespace {"
         const namespaceMatch = line.match(
-            /^(\s+)([A-Z][a-zA-Z0-9_]*)\s*(\{?)(.*)$/
+            /^(\s+)([A-Z][a-zA-Z0-9_]*)\s*(\{?)(.*)$/,
         );
         if (namespaceMatch) {
             const [, indent, namespaceName, openBrace] = namespaceMatch;
@@ -135,7 +135,7 @@ export class ZMarkupParser {
             this.validateChild(element);
 
             // If opening brace, push context for this namespace
-            if (openBrace === "{") {
+            if (openBrace === '{') {
                 this.pushContext(namespaceName, namespaceName, lineNumber);
             }
         }
@@ -163,30 +163,34 @@ export class ZMarkupParser {
             this.addDiagnostic(
                 element,
                 `Unexpected child element '${element.keyword}' outside of any parent context`,
-                DiagnosticSeverity.Error
+                DiagnosticSeverity.Error,
             );
             return;
         }
 
-        // Check if child is allowed in current context
-        if (!this.isChildAllowed(element.keyword, currentContext)) {
-            const allowedChildren = currentContext.allowedChildren.join(", ");
+        const { allowedChildren } = currentContext;
+
+        if (
+            allowedChildren.length > 1 &&
+            !this.isChildAllowed(element.keyword, currentContext)
+        ) {
+            const allowedChildrenStr = allowedChildren.join(', ');
             this.addDiagnostic(
                 element,
-                `'${element.keyword}' is not allowed in '${currentContext.elementType}'. Allowed children: ${allowedChildren}`,
-                DiagnosticSeverity.Error
+                `'${element.keyword}' is not allowed in '${currentContext.elementType}'. Allowed children: ${allowedChildrenStr}`,
+                DiagnosticSeverity.Error,
             );
         }
     }
 
     private validateRootElement(element: ParsedElement): void {
         // Check if it's a valid workspace
-        if (element.keyword === "workspace") {
+        if (element.keyword === 'workspace') {
             if (!this.registry.targets?.workspace) {
                 this.addDiagnostic(
                     element,
-                    "workspace is not supported in this Z language version",
-                    DiagnosticSeverity.Error
+                    'workspace is not supported in this Z language version',
+                    DiagnosticSeverity.Error,
                 );
             }
             return;
@@ -199,9 +203,16 @@ export class ZMarkupParser {
             return;
         }
 
+        // Check if the keyword is a namespace (for nested structures)
+        const namespaceDef = this.registry.namespaces?.[element.keyword];
+        if (namespaceDef) {
+            // It's a valid namespace, let's treat it as a valid child element.
+            return;
+        }
+
         // Unknown root element
         const validRootElements = [
-            "workspace",
+            'workspace',
             ...Object.keys(this.registry.targets || {}),
         ];
 
@@ -209,31 +220,36 @@ export class ZMarkupParser {
             element,
             `Unknown root element '${
                 element.keyword
-            }'. Valid root elements: ${validRootElements.join(", ")}`,
-            DiagnosticSeverity.Error
+            }'. Valid root elements: ${validRootElements.join(', ')}`,
+            DiagnosticSeverity.Error,
         );
     }
 
     private validateChildElement(
         element: ParsedElement,
-        context: ValidationContext | null
+        context: ValidationContext | null,
     ): void {
         if (!context) {
             this.addDiagnostic(
                 element,
                 `Unexpected element '${element.keyword}' - no parent context`,
-                DiagnosticSeverity.Error
+                DiagnosticSeverity.Error,
             );
             return;
         }
 
+        const { allowedChildren } = context;
+
         // Check if child is allowed in current context
-        if (!this.isChildAllowed(element.keyword, context)) {
-            const allowedChildren = context.allowedChildren.join(", ");
+        if (
+            allowedChildren.length > 1 &&
+            !this.isChildAllowed(element.keyword, context)
+        ) {
+            const allowedChildrenStr = context.allowedChildren.join(', ');
             this.addDiagnostic(
                 element,
-                `'${element.keyword}' is not allowed in '${context.elementType}'. Allowed children: ${allowedChildren}`,
-                DiagnosticSeverity.Error
+                `'${element.keyword}' is not allowed in '${context.elementType}'. Allowed children: ${allowedChildrenStr}`,
+                DiagnosticSeverity.Error,
             );
         }
     }
@@ -245,77 +261,87 @@ export class ZMarkupParser {
             this.addDiagnostic(
                 element,
                 `Invalid element name '${element.name}'. Must start with a letter and contain only letters, numbers, underscores, and dashes`,
-                DiagnosticSeverity.Error
+                DiagnosticSeverity.Error,
             );
         }
 
         // Check reserved names
         const reservedNames = [
-            "function",
-            "class",
-            "interface",
-            "let",
-            "const",
-            "var",
+            'function',
+            'class',
+            'interface',
+            'let',
+            'const',
+            'var',
         ];
         if (reservedNames.includes(element.name)) {
             this.addDiagnostic(
                 element,
                 `'${element.name}' is a reserved name and cannot be used`,
-                DiagnosticSeverity.Error
+                DiagnosticSeverity.Error,
             );
         }
     }
 
     private isChildAllowed(
         childKeyword: string,
-        context: ValidationContext
+        context: ValidationContext,
     ): boolean {
-        // If context allows all children
-        if (context.allowedChildren.includes("*")) {
+        // If there is only one allowed child type, any name is valid as it will be of that type.
+        if (context.allowedChildren.length === 1) {
             return true;
         }
 
-        // Direct match
-        if (context.allowedChildren.includes(childKeyword)) {
-            return true;
-        }
-
-        return false;
+        return context.allowedChildren.includes(childKeyword);
     }
 
     private pushContext(keyword: string, name: string, line: number): void {
         let allowedChildren: string[] = [];
-        let mode: "markup" | "code" = "markup";
+        let mode: 'markup' | 'code' = 'markup';
 
         // Determine allowed children and mode based on element type
-        if (keyword === "workspace") {
+        if (keyword === 'workspace') {
             allowedChildren = Object.keys(this.registry.targets || {});
-            mode = "markup";
+            mode = 'markup';
         } else if (this.registry.targets?.[keyword]) {
             allowedChildren =
                 this.registry.targets[keyword].allowedChildren || [];
-            mode = this.registry.targets[keyword].mode || "markup";
+            mode = this.registry.targets[keyword].mode || 'markup';
         } else if (this.registry.namespaces?.[keyword]) {
             allowedChildren =
                 this.registry.namespaces[keyword].allowedChildren || [];
-            mode = "markup";
+            mode = 'markup';
         } else {
             // For unrecognized elements (like route names), allow any children
             // This handles cases like "posts { [slug] }" where posts is a route
-            allowedChildren = ["*"];
-            mode = "markup";
+            allowedChildren = ['*'];
+            mode = 'markup';
         }
 
-        const context: ValidationContext = {
-            elementType: keyword,
-            elementName: name,
-            allowedChildren,
-            mode,
-            line,
-        };
+        let definition =
+            this.registry.targets?.[keyword] ||
+            this.registry.namespaces?.[keyword] ||
+            this.registry.childTypes?.[keyword];
 
-        this.contextStack.push(context);
+        if (!definition && this.getCurrentContext()) {
+            const currentContext = this.getCurrentContext()!;
+            if (currentContext.allowedChildren.length === 1) {
+                const childType = currentContext.allowedChildren[0];
+                definition = this.registry.childTypes?.[childType];
+                keyword = childType; // Remap keyword to the actual child type
+            }
+        }
+        if (definition) {
+            const newContext: ValidationContext = {
+                elementType: keyword,
+                elementName: name,
+                allowedChildren,
+                mode,
+                line,
+            };
+
+            this.contextStack.push(newContext);
+        }
     }
 
     private popContext(): void {
@@ -329,7 +355,7 @@ export class ZMarkupParser {
     private addDiagnostic(
         element: ParsedElement,
         message: string,
-        severity: DiagnosticSeverity
+        severity: DiagnosticSeverity,
     ): void {
         this.diagnostics.push({
             severity,
@@ -338,7 +364,7 @@ export class ZMarkupParser {
                 end: { line: element.line, character: element.endChar },
             },
             message,
-            source: "z-markup",
+            source: 'z-markup',
         });
     }
 }
