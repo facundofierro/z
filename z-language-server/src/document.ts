@@ -5,28 +5,28 @@
  * You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
  */
 
-import { extname } from "node:path";
-import { URI } from "vscode-uri";
-import * as lsp from "vscode-languageserver";
-import { TextDocument } from "vscode-languageserver-textdocument";
-import * as languageModeIds from "./configuration/languageIds.js";
-import { LspClient } from "./lsp-client.js";
-import { CommandTypes, type ts } from "./ts-protocol.js";
+import { extname } from 'node:path';
+import { URI } from 'vscode-uri';
+import * as lsp from 'vscode-languageserver';
+import { TextDocument } from 'vscode-languageserver-textdocument';
+import * as languageModeIds from './configuration/languageIds.js';
+import { LspClient } from './lsp-client.js';
+import { CommandTypes, type ts } from './ts-protocol.js';
 import {
     ClientCapability,
     type ITypeScriptServiceClient,
-} from "./typescriptService.js";
-import API from "./utils/api.js";
-import { coalesce } from "./utils/arrays.js";
-import { Delayer } from "./utils/async.js";
-import { ResourceMap } from "./utils/resourceMap.js";
+} from './typescriptService.js';
+import API from './utils/api.js';
+import { coalesce } from './utils/arrays.js';
+import { Delayer } from './utils/async.js';
+import { ResourceMap } from './utils/resourceMap.js';
 
 function mode2ScriptKind(
-    mode: string
+    mode: string,
 ): ts.server.protocol.ScriptKindName | undefined {
     switch (mode) {
         case languageModeIds.z:
-            return "TSX"; // Z uses TSX-like syntax for JSX support
+            return 'TSX'; // Z uses TSX-like syntax for JSX support
     }
     return undefined;
 }
@@ -35,9 +35,9 @@ function mode2ScriptKind(
  * @deprecated Remove in next major.
  */
 function getModeFromFileUri(uri: string): string | undefined {
-    const extension = extname(uri).toUpperCase();
+    const extension = extname(uri).toLowerCase();
     switch (extension) {
-        case ".Z":
+        case '.z':
             return languageModeIds.z;
     }
     return undefined;
@@ -61,7 +61,7 @@ class GetErrRequest {
     public static executeGetErrRequest(
         client: ITypeScriptServiceClient,
         files: ResourceMap<void>,
-        onDone: () => void
+        onDone: () => void,
     ) {
         return new GetErrRequest(client, files, onDone);
     }
@@ -73,7 +73,7 @@ class GetErrRequest {
     private constructor(
         private readonly client: ITypeScriptServiceClient,
         public readonly files: ResourceMap<void>,
-        onDone: () => void
+        onDone: () => void,
     ) {
         if (!this.isErrorReportingEnabled()) {
             this._done = true;
@@ -89,10 +89,10 @@ class GetErrRequest {
                         supportsSyntaxGetErr ||
                         client.hasCapabilityForResource(
                             entry.resource,
-                            ClientCapability.Semantic
-                        )
+                            ClientCapability.Semantic,
+                        ),
                 )
-                .map((entry) => client.toTsFilePath(entry.resource.toString()))
+                .map((entry) => client.toTsFilePath(entry.resource.toString())),
         );
 
         if (!allFiles.length) {
@@ -101,17 +101,17 @@ class GetErrRequest {
         } else {
             const request = this.areProjectDiagnosticsEnabled()
                 ? // Note that geterrForProject is almost certainly not the api we want here as it ends up computing far
-                  // too many diagnostics
-                  client.executeAsync(
-                      CommandTypes.GeterrForProject,
-                      { delay: 0, file: allFiles[0] },
-                      this._token.token
-                  )
+            // too many diagnostics
+                client.executeAsync(
+                    CommandTypes.GeterrForProject,
+                    { delay: 0, file: allFiles[0] },
+                    this._token.token,
+                )
                 : client.executeAsync(
-                      CommandTypes.Geterr,
-                      { delay: 0, files: allFiles },
-                      this._token.token
-                  );
+                    CommandTypes.Geterr,
+                    { delay: 0, files: allFiles },
+                    this._token.token,
+                );
 
             request.finally(() => {
                 if (this._done) {
@@ -208,7 +208,7 @@ export class LspDocument {
         return this.positionAt(
             nextLine < this._document.lineCount
                 ? nextLineOffset - 1
-                : nextLineOffset
+                : nextLineOffset,
         );
     }
 
@@ -224,13 +224,13 @@ export class LspDocument {
     getFullRange(): lsp.Range {
         return lsp.Range.create(
             lsp.Position.create(0, 0),
-            this.getLineEnd(Math.max(this.lineCount - 1, 0))
+            this.getLineEnd(Math.max(this.lineCount - 1, 0)),
         );
     }
 
     applyEdit(
         version: number,
-        change: lsp.TextDocumentContentChangeEvent
+        change: lsp.TextDocumentContentChangeEvent,
     ): void {
         const content = this.getText();
         let newContent = change.text;
@@ -244,7 +244,7 @@ export class LspDocument {
             this._uri.toString(),
             this.languageId,
             version,
-            newContent
+            newContent,
         );
     }
 }
@@ -263,7 +263,7 @@ export class LspDocuments {
     constructor(
         client: ITypeScriptServiceClient,
         lspClient: LspClient,
-        onCaseInsensitiveFileSystem: boolean
+        onCaseInsensitiveFileSystem: boolean,
     ) {
         this.client = client;
         this.lspClient = lspClient;
@@ -361,12 +361,12 @@ export class LspDocuments {
     }
 
     public onDidChangeTextDocument(
-        params: lsp.DidChangeTextDocumentParams
+        params: lsp.DidChangeTextDocumentParams,
     ): void {
         const { textDocument } = params;
         if (textDocument.version === null) {
             throw new Error(
-                `Received document change event for ${textDocument.uri} without valid version identifier`
+                `Received document change event for ${textDocument.uri} without valid version identifier`,
             );
         }
 
@@ -465,7 +465,7 @@ export class LspDocuments {
 
     public getErr(resources: readonly URI[]): void {
         const handledResources = resources.filter((resource) =>
-            this.handles(resource)
+            this.handles(resource),
         );
         if (!handledResources.length) {
             return;
@@ -493,7 +493,7 @@ export class LspDocuments {
 
         const delay = Math.min(
             Math.max(Math.ceil(buffer.lineCount / 20), 300),
-            800
+            800,
         );
         this.triggerDiagnostics(delay);
         return true;
@@ -521,7 +521,7 @@ export class LspDocuments {
         }
 
         if (orderedFileSet.size) {
-            const getErr = (this.pendingGetErr =
+            const getErr = this.pendingGetErr =
                 GetErrRequest.executeGetErrRequest(
                     this.client,
                     orderedFileSet,
@@ -529,8 +529,8 @@ export class LspDocuments {
                         if (this.pendingGetErr === getErr) {
                             this.pendingGetErr = undefined;
                         }
-                    }
-                ));
+                    },
+                );
         }
 
         this.pendingDiagnostics.clear();

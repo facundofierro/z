@@ -92,7 +92,7 @@ export function readContents(path: string): string {
     return fs.readFileSync(path, 'utf-8').toString();
 }
 
-export function documentFromFile({ path, languageId = 'typescript' }: { path: string; languageId?: string; }): lsp.TextDocumentItem {
+export function documentFromFile({ path, languageId = 'z' }: { path: string; languageId?: string; }): lsp.TextDocumentItem {
     const pathComponents = path.split('/');
     return {
         languageId,
