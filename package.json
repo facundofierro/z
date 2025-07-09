@@ -27,7 +27,12 @@
     "version-packages": "changeset version",
     "release": "turbo build && changeset publish",
     "compile:example": "cargo run -p z-cli --",
-    "package:extension": "turbo package --filter='@z-lang/vscode-extension'"
+    "package:extension": "turbo package --filter='@z-lang/vscode-extension'",
+    "deploy:extension": "./deploy-extension.sh --patch",
+    "deploy:extension:minor": "./deploy-extension.sh --minor",
+    "deploy:extension:major": "./deploy-extension.sh --major",
+    "deploy:extension:force": "./deploy-extension.sh --patch --force",
+    "deploy:extension:skip-tests": "./deploy-extension.sh --patch --skip-tests"
   },
   "devDependencies": {
     "@changesets/cli": "^2.26.2",

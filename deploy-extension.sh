@@ -106,55 +106,53 @@ echo -e "${BLUE}🚀 Z Language Extension Deployment${NC}"
 echo "================================="
 
 # Check if we're in the right directory
-if [[ ! -f "vscode/package.json" ]] || [[ ! -f "z-language-server/package.json" ]]; then
+if [[ ! -f "packages/vscode-extension/package.json" ]] || [[ ! -f "packages/language-server/package.json" ]]; then
     print_error "Please run this script from the root of the Z language project"
     exit 1
 fi
 
 # Step 1: Run tests
-# skip tests for now
-SKIP_TESTS=true
 if [[ "$SKIP_TESTS" == false ]]; then
-    print_step "Running tests in z-language-server..."
-    cd z-language-server
+    print_step "Running tests in language-server..."
+    cd packages/language-server
     if pnpm test; then
         print_success "All tests passed!"
     else
         print_error "Tests failed! Aborting deployment."
         exit 1
     fi
-    cd ..
+    cd ../..
 else
     print_warning "Skipping tests (--skip-tests flag used)"
 fi
 
 # Step 2: Build language server
-print_step "Building z-language-server..."
-cd z-language-server
+print_step "Building language-server..."
+cd packages/language-server
 if pnpm build; then
     print_success "Language server built successfully!"
 else
     print_error "Language server build failed!"
     exit 1
 fi
-cd ..
+cd ../..
 
 # Step 3: Get current version and increment
 print_step "Managing version..."
-CURRENT_VERSION=$(node -p "require('./vscode/package.json').version")
+CURRENT_VERSION=$(node -p "require('./packages/vscode-extension/package.json').version")
 NEW_VERSION=$(increment_version $CURRENT_VERSION $VERSION_TYPE)
 
 print_step "Updating version from $CURRENT_VERSION to $NEW_VERSION..."
 
-# Update version in vscode/package.json
-cd vscode
-npm version $NEW_VERSION --no-git-tag-version
-cd ..
+# Update version in packages/vscode-extension/package.json
+cd packages/vscode-extension
+pnpm version $NEW_VERSION --no-git-tag-version
+cd ../..
 
 # Step 4: Compile VSCode extension
 print_step "Compiling VSCode extension..."
-cd vscode
-if npm run compile; then
+cd packages/vscode-extension
+if pnpm run compile; then
     print_success "VSCode extension compiled successfully!"
 else
     print_error "VSCode extension compilation failed!"
@@ -165,26 +163,26 @@ fi
 print_step "Packaging extension..."
 EXTENSION_FILE="z-language-$NEW_VERSION.vsix"
 
-if npm run package; then
+if pnpm run package; then
     print_success "Extension packaged as $EXTENSION_FILE"
 else
     print_error "Extension packaging failed!"
     exit 1
 fi
 
-cd ..
+cd ../..
 
 # Step 6: Check if extension file exists
-if [[ ! -f "vscode/$EXTENSION_FILE" ]]; then
-    print_error "Extension file not found: vscode/$EXTENSION_FILE"
+if [[ ! -f "packages/vscode-extension/$EXTENSION_FILE" ]]; then
+    print_error "Extension file not found: packages/vscode-extension/$EXTENSION_FILE"
     exit 1
 fi
 
 # Step 7: Check if Cursor is available
 if ! command -v cursor &> /dev/null; then
     print_warning "Cursor command not found. Please install the extension manually:"
-    print_warning "File location: $(pwd)/vscode/$EXTENSION_FILE"
-    print_warning "Run: cursor --install-extension $(pwd)/vscode/$EXTENSION_FILE"
+    print_warning "File location: $(pwd)/packages/vscode-extension/$EXTENSION_FILE"
+    print_warning "Run: cursor --install-extension $(pwd)/packages/vscode-extension/$EXTENSION_FILE"
     exit 0
 fi
 
@@ -199,28 +197,28 @@ if [[ "$FORCE_INSTALL" == false ]]; then
     fi
 fi
 
-if cursor --install-extension "$(pwd)/vscode/$EXTENSION_FILE"; then
+if cursor --install-extension "$(pwd)/packages/vscode-extension/$EXTENSION_FILE"; then
     print_success "Extension installed successfully in Cursor!"
 else
     print_error "Failed to install extension in Cursor"
     print_warning "You can install it manually with:"
-    print_warning "cursor --install-extension $(pwd)/vscode/$EXTENSION_FILE"
+    print_warning "cursor --install-extension $(pwd)/packages/vscode-extension/$EXTENSION_FILE"
     exit 1
 fi
 
 # Step 9: Clean up old extension files (keep last 3 versions)
 print_step "Cleaning up old extension files..."
-cd vscode
+cd packages/vscode-extension
 ls -t z-language-*.vsix 2>/dev/null | tail -n +4 | xargs -r rm
 print_success "Cleanup completed"
-cd ..
+cd ../..
 
 # Final summary
 echo ""
 echo -e "${GREEN}🎉 Deployment completed successfully!${NC}"
 echo "=================================="
 echo "📦 Extension: z-language-$NEW_VERSION.vsix"
-echo "📁 Location: $(pwd)/vscode/"
+echo "📁 Location: $(pwd)/packages/vscode-extension/"
 echo "🔄 Version: $CURRENT_VERSION → $NEW_VERSION"
 echo ""
 echo -e "${BLUE}Next steps:${NC}"
