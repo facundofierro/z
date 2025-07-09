@@ -1,0 +1,51 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "pipeline": {
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": [
+        "lib/**",
+        "dist/**",
+        "build/**",
+        "target/**",
+        "out/**"
+      ]
+    },
+    "build:rust": {
+      "dependsOn": [],
+      "outputs": ["target/**"],
+      "cache": false
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "test": {
+      "dependsOn": ["build"],
+      "outputs": ["coverage/**"]
+    },
+    "test:rust": {
+      "dependsOn": ["build:rust"],
+      "outputs": [],
+      "cache": false
+    },
+    "lint": {
+      "outputs": []
+    },
+    "clean": {
+      "cache": false
+    },
+    "typecheck": {
+      "dependsOn": ["^build"],
+      "outputs": []
+    },
+    "package": {
+      "dependsOn": ["build"],
+      "outputs": ["*.vsix", "*.tgz"]
+    }
+  },
+  "globalDependencies": [
+    "shared/registry.json",
+    "shared/grammar.pegjs"
+  ]
+}

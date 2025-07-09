@@ -1,0 +1,4 @@
+packages:
+  - 'packages/*'
+  # Include examples as packages for dependency management
+  - 'examples/*'

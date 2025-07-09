@@ -4,11 +4,36 @@
 
 Z is a revolutionary "target-first" programming language that compiles to multiple platforms (Next.js, SwiftUI, Rust, Tauri, etc.) from a single codebase. The language is built on TSX/TypeScript syntax with extensions for multi-target development, AI-optimized context, and automatic scaffolding.
 
-### Core Architecture
+## 🏗️ Hybrid Monorepo Architecture
 
-- **Compiler**: Rust-based with PegJS grammar (`compiler/`)
-- **Language Server**: TypeScript LSP implementation (`z-language-server/`)
-- **VS Code Extension**: IDE integration (`vscode/`)
+This is a **hybrid monorepo** supporting both Rust and TypeScript ecosystems:
+
+```
+z-lang/
+├── 📦 Cargo.toml              # Rust workspace root
+├── 📦 package.json            # TypeScript workspace root
+├── 🔧 turbo.json              # Build orchestration
+├── 📁 shared/                 # Shared assets (SINGLE SOURCE OF TRUTH)
+│   ├── registry.json          # Language registry
+│   └── grammar.pegjs          # PEG grammar definition
+├── 📁 crates/                 # Rust packages (Cargo workspace)
+│   ├── ast/                   # AST data structures
+│   ├── parser/                # PEG-powered parser
+│   ├── core/                  # Semantic analysis & code generation
+│   └── cli/                   # Command-line interface
+├── 📁 packages/               # TypeScript packages (pnpm workspace)
+│   ├── language-server/       # @z-lang/language-server (LSP)
+│   └── vscode-extension/      # @z-lang/vscode-extension
+├── 📁 examples/               # Example Z programs
+└── 📁 doc/                    # Documentation
+```
+
+### Core Components
+
+- **Rust Compiler**: Multi-target code generation (`crates/`)
+- **Language Server**: TypeScript LSP implementation (`packages/language-server/`)
+- **VS Code Extension**: IDE integration (`packages/vscode-extension/`)
+- **Shared Registry**: Single source of truth (`shared/registry.json`)
 - **Examples**: Reference implementations (`examples/`)
 - **Documentation**: Comprehensive specs and guides (`doc/`)
 
@@ -57,9 +82,60 @@ Automatic file generation based on registry-defined rules:
 - **Use context7 when using shadcn components** - Leverage context7 for component documentation
 - **Verify current directory** - Always check working directory before executing console commands
 
-### Code Organization
+### Development Commands (Hybrid Monorepo)
 
-#### File Structure Patterns
+#### 🔨 Build Commands
+
+```bash
+# Build everything (Rust + TypeScript)
+pnpm build
+
+# Build specific ecosystems
+pnpm build:rust              # Cargo build --release
+pnpm build:ts                # Build packages with Turborepo
+
+# Development builds
+pnpm dev                     # Start all development servers
+pnpm dev:rust                # Cargo watch for development
+```
+
+#### 🧪 Testing Commands
+
+```bash
+# Test everything
+pnpm test
+
+# Test specific ecosystems
+pnpm test:rust               # Cargo test --workspace
+pnpm test:ts                 # Test TypeScript packages
+```
+
+#### 🧹 Code Quality
+
+```bash
+# Lint and format everything
+pnpm lint                    # Lint all code
+pnpm lint:rust               # Clippy for Rust
+pnpm format                  # Format all code (rustfmt + prettier)
+pnpm typecheck               # TypeScript type checking
+```
+
+#### 🛠️ Utility Commands
+
+```bash
+# Try the compiler
+pnpm compile:example examples/hello.z
+
+# Package VS Code extension
+pnpm package:extension
+
+# Clean everything
+pnpm clean                   # Clean all build artifacts
+```
+
+### File Structure Patterns
+
+#### Project Structure
 
 ```
 project/
@@ -78,63 +154,92 @@ project/
 - **Auto-detection**: Target keywords (`next`, `swift`, `rust`) trigger Z markup mode
 - **Generated files**: Use target-specific extensions (`.ts`, `.rs`, `.swift`)
 
-### Language Server Architecture
+## Component Architecture
 
-#### Core Components
+### Rust Components (`crates/`)
+
+| Crate        | Purpose                               | Path             |
+| ------------ | ------------------------------------- | ---------------- |
+| **z-ast**    | Core AST data structures (zero logic) | `crates/ast/`    |
+| **z-parser** | PEG-powered parser (source → AST)     | `crates/parser/` |
+| **z-core**   | Semantic analysis & code generation   | `crates/core/`   |
+| **z-cli**    | Command-line interface                | `crates/cli/`    |
+
+#### Development Patterns
+
+```bash
+# Rust development (from root)
+cargo check                  # Quick check
+cargo build --release       # Production build
+cargo test --workspace      # Run all tests
+cargo watch -x "run -p z-cli -- examples/hello.z"  # Watch mode
+
+# Grammar changes
+# 1. Update shared/grammar.pegjs
+# 2. Rebuild parser crate
+# 3. Update crates/ast/ if needed
+# 4. Test with cargo test --workspace
+```
+
+### TypeScript Components (`packages/`)
+
+| Package                      | Purpose            | Path                         |
+| ---------------------------- | ------------------ | ---------------------------- |
+| **@z-lang/language-server**  | LSP implementation | `packages/language-server/`  |
+| **@z-lang/vscode-extension** | VS Code extension  | `packages/vscode-extension/` |
+
+#### Core Language Server Components
 
 - **`z-lsp-server.ts`**: Main LSP server extending TypeScript LSP
-- **`z-registry.ts`**: Registry-driven scaffolding configuration
+- **`z-registry.ts`**: Registry-driven scaffolding configuration (reads `shared/registry.json`)
 - **`scaffolding-commands.ts`**: Auto-file generation based on block structure
 - **`z-validation.ts`**: Z language syntax validation
-- **`embedded-registry.json`**: Target and namespace definitions
 
-#### Scaffolding System
+#### Development Patterns
 
-- **Registry-driven**: Behavior defined in `embedded-registry.json`
+```bash
+# Language server development (from root)
+cd packages/language-server
+pnpm dev                     # Watch mode
+
+# VS Code extension development
+cd packages/vscode-extension
+pnpm compile                 # Build extension
+pnpm package                 # Create .vsix
+
+# Or use unified commands (from root)
+pnpm build:ts                # Build all TypeScript packages
+pnpm dev                     # Start all dev servers
+```
+
+## Shared Registry System (`shared/registry.json`)
+
+### Single Source of Truth
+
+The `shared/registry.json` file is accessed by **both** Rust and TypeScript components:
+
+- **Rust compiler**: Reads via `include_str!("../../../shared/registry.json")`
+- **Language server**: Reads via file system with fallback paths
+- **No duplication**: Eliminated old `embedded-registry.json`
+
+### Registry Structure
+
+```json
+{
+  "version": "0.1.0",
+  "targets": { ... },           // Target definitions (next, swift, rust, etc.)
+  "namespaces": { ... },        // Namespace definitions (Routes, Components, etc.)
+  "childTypes": { ... },        // Child type definitions (route, component, etc.)
+  "annotations": { ... }        // Annotation definitions (@doc, @context, etc.)
+}
+```
+
+### Scaffolding System
+
+- **Registry-driven**: Behavior defined in `shared/registry.json`
 - **Namespace types**: Routes, API, Components, Schema, App, etc.
 - **Child modes**: `single` (all same type) vs `multiple` (mixed types)
 - **Auto-generation**: Creates files when new children detected in parent blocks
-
-### Compiler Architecture
-
-#### Rust Workspace (`compiler/`)
-
-- **`z-ast`**: Core AST data structures (zero logic)
-- **`z-parser`**: PEG-powered parser (source → AST)
-- **`z-compiler-core`**: Semantic analysis and code generation
-- **`z-cli`**: Command-line interface
-
-#### Build Process
-
-```bash
-# Development
-cargo watch -x "run -p z-cli -- examples/hello.z"
-
-# Production
-cargo build --release -p z-cli
-```
-
-## Common Development Patterns
-
-### Compiler Development (Rust)
-
-- **Grammar changes**: Update `grammar.pegjs` → regenerate parser
-- **AST modifications**: Update `z-ast` crate first
-- **Target compilers**: Implement in `core/compilers/`
-- **Testing**: Use `cargo test --workspace`
-
-### Language Server Development (TypeScript)
-
-- **Feature additions**: Extend `ZLspServer` class
-- **Scaffolding**: Modify registry and scaffolding commands
-- **Validation**: Update `z-validation.ts` for new syntax
-- **Commands**: Add to `ZCommands` constant
-
-### Extension Development (VS Code)
-
-- **Syntax highlighting**: Update `z.tmLanguage.json`
-- **Language config**: Modify `language-configuration.json`
-- **Commands**: Integrate with language server commands
 
 ## Target-Specific Knowledge
 
@@ -163,35 +268,12 @@ cargo build --release -p z-cli
 - **Shared types**: Cross-platform type definitions
 - **Registry lookups**: Use `getNamespaceInfo()` for target-specific behavior
 
-## Registry System
-
-### Namespace Configuration
-
-```json
-{
-  "childType": "route|component|table|enum",
-  "childMode": "single|multiple",
-  "scaffolding": {
-    "fileExtension": ".route.z",
-    "parseMode": "code|markup",
-    "directoryNesting": true|false
-  }
-}
-```
-
-### Scaffolding Types
-
-- **tsx-like**: React/TSX components
-- **field-list**: Database tables/models
-- **value-list**: Enumerations
-- **class-based**: Object-oriented structures
-
 ## Testing & Validation
 
 ### Test Files
 
-- **Compiler tests**: `compiler/crates/*/tests/`
-- **Language server tests**: `z-language-server/src/*.test.ts`
+- **Compiler tests**: `crates/*/tests/`
+- **Language server tests**: `packages/language-server/src/*.test.ts`
 - **Example validation**: `examples/*.z` files
 - **Invalid syntax**: `test-invalid.z` files
 
@@ -201,32 +283,74 @@ cargo build --release -p z-cli
 - **TypeScript validation**: For code-mode files
 - **Registry validation**: Ensure namespace/child type compatibility
 
-## Common Tasks & Commands
+## Common Development Tasks
+
+### Adding New Target Support
+
+1. **Update Registry**: Add target definition in `shared/registry.json`
+2. **Rust Compiler**: Implement `TargetCompiler` trait in `crates/core/src/compilers/`
+3. **Language Server**: Registry changes are automatically picked up
+4. **VS Code Extension**: Add syntax highlighting if needed
+
+### Modifying the Grammar
+
+1. **Edit Grammar**: Update `shared/grammar.pegjs`
+2. **Regenerate Parser**: Build the parser crate
+3. **Update AST**: Modify `crates/ast/` if needed
+4. **Test**: Run compiler tests
+
+### Registry Changes
+
+1. **Edit**: `shared/registry.json`
+2. **Test Rust**: `cargo test --workspace`
+3. **Test TypeScript**: `pnpm test:ts`
+4. **Restart LSP**: In VS Code for immediate effect
 
 ### Development Workflow
 
 ```bash
-# Language server development
-cd z-language-server
-pnpm install
-pnpm dev          # Watch mode
+# Full development workflow (from root)
+pnpm install                 # Install TypeScript dependencies
+cargo build --release       # Build Rust components
+pnpm build:ts               # Build TypeScript components
 
-# Compiler development
-cd compiler
-cargo build --release -p z-cli
-cargo test --workspace
+# Development mode
+pnpm dev                    # Start all development servers
+# OR run separately:
+pnpm dev:rust               # Cargo watch
+cd packages/language-server && pnpm dev  # LSP watch mode
 
-# Extension packaging
-cd vscode
-pnpm install
-pnpm package
+# Before committing
+pnpm lint                   # Lint everything
+pnpm test                   # Test everything
+pnpm build                  # Build everything
 ```
 
-### Debugging
+## Troubleshooting
 
-- **LSP logs**: Check language server output in VS Code
-- **Parser debugging**: Use compiler test cases
-- **Scaffolding issues**: Verify registry configuration
+### Common Issues
+
+1. **Scaffolding failures**: Check `shared/registry.json` configuration
+2. **Parse errors**: Verify Z markup vs TypeScript mode detection
+3. **Type conflicts**: Ensure proper inheritance chain
+4. **Missing dependencies**: Run `pnpm install` (for TypeScript) or verify Cargo.toml
+5. **Registry not found**: Ensure `shared/registry.json` exists and is valid JSON
+
+### Debug Strategies
+
+- **LSP issues**: Check language server output in VS Code
+- **Parser debugging**: Use compiler test cases in `crates/*/tests/`
+- **Scaffolding issues**: Verify `shared/registry.json` configuration
+- **Build issues**: Use `cargo check` for Rust, `pnpm typecheck` for TypeScript
+- **Registry issues**: Both ecosystems read the same `shared/registry.json`
+
+### Path Debugging
+
+**Important**: The monorepo structure means paths are relative to workspace roots:
+
+- **Rust**: Workspace root is project root (has `Cargo.toml`)
+- **TypeScript**: Workspace root is project root (has `package.json`)
+- **Language Server**: Runs from `packages/language-server/` but reads registry from `../../shared/registry.json`
 
 ## AI Context Integration
 
@@ -245,34 +369,22 @@ pnpm package
 
 ## Performance Considerations
 
+### Build Optimization
+
+- **Turborepo**: Coordinates builds across both ecosystems
+- **Rust builds**: Use native Cargo for performance
+- **TypeScript builds**: Use Rollup/TypeScript
+- **Caching**: Optimizes repeated builds
+- **Dependencies**: Properly tracked across languages
+
 ### File Organization
 
 - **500-line limit**: Auto-split large files
 - **Directory nesting**: Based on namespace configuration
 - **Parse mode selection**: Optimize for content type
 
-### Build Optimization
-
-- **Incremental compilation**: Target-specific builds
-- **Template caching**: Reuse scaffolding templates
-- **Registry lookups**: Cache namespace information
-
-## Troubleshooting
-
-### Common Issues
-
-1. **Scaffolding failures**: Check registry configuration and target directories
-2. **Parse errors**: Verify Z markup vs TypeScript mode detection
-3. **Type conflicts**: Ensure proper inheritance chain
-4. **Missing dependencies**: Run appropriate package manager install
-
-### Debug Strategies
-
-- Use `z-language-server` logs for LSP issues
-- Check `embedded-registry.json` for scaffolding configuration
-- Validate grammar with `compiler/grammar.pegjs`
-- Test with minimal examples in `examples/` directory
-
 ---
 
 _Z Language: "One syntax, any target - with AI whispering context into every compilation."_
+
+**Hybrid Monorepo** | [GitHub](https://github.com/facundofierro/z-lang) | [Documentation](./doc/)
