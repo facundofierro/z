@@ -20,7 +20,6 @@ import API from './utils/api.js';
 import { coalesce } from './utils/arrays.js';
 import { Delayer } from './utils/async.js';
 import { ResourceMap } from './utils/resourceMap.js';
-import { getChildTypeInfo } from './z-registry.js';
 
 function mode2ScriptKind(
     mode: string,
@@ -49,13 +48,9 @@ function getZScriptKind(
         return getScriptKindFromRegistry(fileType);
     }
 
-    // For plain .z files, use content-based detection
-    const content = document.getText();
-    if (shouldUseZMarkupMode(content)) {
-        return 'TS'; // Use TS for markup-like content (simpler parsing)
-    }
-
-    return 'TSX'; // Default to TSX for code-like content
+    // For plain .z files, always use TSX for TypeScript server
+    // (Z markup mode is handled separately in z-lsp-server.ts)
+    return 'TSX';
 }
 
 /**
@@ -75,14 +70,8 @@ function extractFileType(filepath: string): string | null {
     const simpleMatch = filename.match(/^([a-zA-Z][a-zA-Z0-9_-]*)\.z$/);
     if (simpleMatch) {
         const baseName = simpleMatch[1];
-
-        // Only return as type if it's a known type from registry
-        try {
-            const typeInfo = getChildTypeInfo(baseName);
-            return typeInfo ? baseName : null;
-        } catch {
-            return null;
-        }
+        // Since we always return TSX now, we can return the baseName if it looks like a type
+        return baseName;
     }
 
     return null;
@@ -91,91 +80,10 @@ function extractFileType(filepath: string): string | null {
 /**
  * Get script kind from registry based on file type
  */
-function getScriptKindFromRegistry(fileType: string): ts.server.protocol.ScriptKindName {
-    try {
-        const typeInfo = getChildTypeInfo(fileType);
-
-        if (typeInfo) {
-            // If registry defines this as markup, use TS; otherwise use TSX
-            return typeInfo.parseMode === 'markup' ? 'TS' : 'TSX';
-        }
-    } catch (error) {
-        // Fall back to content detection if registry unavailable
-    }
-
-    // Default to TSX for unknown types
+function getScriptKindFromRegistry(_fileType: string): ts.server.protocol.ScriptKindName {
+    // Always return TSX for code files - no plain TS mode
+    // Z markup mode is handled separately in z-lsp-server.ts
     return 'TSX';
-}
-
-/**
- * Content-based detection for Z markup keywords
- * (Copied from z-lsp-server.ts to avoid circular imports)
- */
-function shouldUseZMarkupMode(content: string): boolean {
-    const trimmedContent = content.trim();
-
-    // Skip empty files or comments-only files
-    if (!trimmedContent || trimmedContent.startsWith('//')) {
-        return false;
-    }
-
-    // Check for Z language target keywords at the start of file
-    const zTargetKeywords = [
-        'workspace',
-        'next',
-        'swift',
-        'rust',
-        'tauri',
-        'android',
-        'harmony',
-        'qt',
-        'java',
-        'python',
-        'bash',
-    ];
-
-    // Check for Z markup structural keywords
-    const zMarkupKeywords = [
-        'Routes',
-        'Components',
-        'Schema',
-        'API',
-        'App',
-        'table',
-        'enum',
-        'type',
-        'fun',
-        'mod',
-    ];
-
-    // Remove comments and get first meaningful line
-    const lines = trimmedContent.split('\n');
-    let firstMeaningfulLine = '';
-
-    for (const line of lines) {
-        const trimmedLine = line.trim();
-        if (trimmedLine && !trimmedLine.startsWith('//')) {
-            firstMeaningfulLine = trimmedLine;
-            break;
-        }
-    }
-
-    // Check if first meaningful line starts with a Z target keyword
-    for (const keyword of zTargetKeywords) {
-        if (firstMeaningfulLine.startsWith(`${keyword} `)) {
-            return true;
-        }
-    }
-
-    // Check for Z markup structural keywords anywhere in first few lines
-    const firstFewLines = lines.slice(0, 10).join(' ');
-    for (const keyword of zMarkupKeywords) {
-        if (firstFewLines.includes(keyword + ' ') || firstFewLines.includes(keyword + '{')) {
-            return true;
-        }
-    }
-
-    return false;
 }
 
 /**
