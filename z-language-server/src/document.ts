@@ -20,15 +20,162 @@ import API from './utils/api.js';
 import { coalesce } from './utils/arrays.js';
 import { Delayer } from './utils/async.js';
 import { ResourceMap } from './utils/resourceMap.js';
+import { getChildTypeInfo } from './z-registry.js';
 
 function mode2ScriptKind(
     mode: string,
 ): ts.server.protocol.ScriptKindName | undefined {
     switch (mode) {
         case languageModeIds.z:
-            return 'TSX'; // Z uses TSX-like syntax for JSX support
+            return 'TSX'; // Default for Z files, but will be dynamically determined
     }
     return undefined;
+}
+
+/**
+ * Enhanced script kind detection for Z files that considers:
+ * 1. File type from filename (e.g., route.z, component.z)
+ * 2. Registry configuration for that type
+ * 3. Content-based detection for plain .z files
+ */
+function getZScriptKind(
+    document: LspDocument,
+): ts.server.protocol.ScriptKindName {
+    // Extract file type from filename
+    const fileType = extractFileType(document.uri.fsPath);
+
+    if (fileType) {
+        // Use registry to determine if this type should be markup or TSX-like
+        return getScriptKindFromRegistry(fileType);
+    }
+
+    // For plain .z files, use content-based detection
+    const content = document.getText();
+    if (shouldUseZMarkupMode(content)) {
+        return 'TS'; // Use TS for markup-like content (simpler parsing)
+    }
+
+    return 'TSX'; // Default to TSX for code-like content
+}
+
+/**
+ * Extract file type from filename using registry patterns
+ * Examples: name.route.z → 'route', Button.component.z → 'component', plain.z → null
+ */
+function extractFileType(filepath: string): string | null {
+    const filename = filepath.split('/').pop() || '';
+
+    // Check for type.z pattern (e.g., name.route.z, Button.component.z)
+    const typeMatch = filename.match(/^[a-zA-Z][a-zA-Z0-9_-]*\.([a-zA-Z][a-zA-Z0-9_-]*)\.z$/);
+    if (typeMatch) {
+        return typeMatch[1]; // Return the type part
+    }
+
+    // Check for simple type.z pattern (e.g., route.z, component.z)
+    const simpleMatch = filename.match(/^([a-zA-Z][a-zA-Z0-9_-]*)\.z$/);
+    if (simpleMatch) {
+        const baseName = simpleMatch[1];
+
+        // Only return as type if it's a known type from registry
+        try {
+            const typeInfo = getChildTypeInfo(baseName);
+            return typeInfo ? baseName : null;
+        } catch {
+            return null;
+        }
+    }
+
+    return null;
+}
+
+/**
+ * Get script kind from registry based on file type
+ */
+function getScriptKindFromRegistry(fileType: string): ts.server.protocol.ScriptKindName {
+    try {
+        const typeInfo = getChildTypeInfo(fileType);
+
+        if (typeInfo) {
+            // If registry defines this as markup, use TS; otherwise use TSX
+            return typeInfo.parseMode === 'markup' ? 'TS' : 'TSX';
+        }
+    } catch (error) {
+        // Fall back to content detection if registry unavailable
+    }
+
+    // Default to TSX for unknown types
+    return 'TSX';
+}
+
+/**
+ * Content-based detection for Z markup keywords
+ * (Copied from z-lsp-server.ts to avoid circular imports)
+ */
+function shouldUseZMarkupMode(content: string): boolean {
+    const trimmedContent = content.trim();
+
+    // Skip empty files or comments-only files
+    if (!trimmedContent || trimmedContent.startsWith('//')) {
+        return false;
+    }
+
+    // Check for Z language target keywords at the start of file
+    const zTargetKeywords = [
+        'workspace',
+        'next',
+        'swift',
+        'rust',
+        'tauri',
+        'android',
+        'harmony',
+        'qt',
+        'java',
+        'python',
+        'bash',
+    ];
+
+    // Check for Z markup structural keywords
+    const zMarkupKeywords = [
+        'Routes',
+        'Components',
+        'Schema',
+        'API',
+        'App',
+        'table',
+        'enum',
+        'type',
+        'fun',
+        'mod',
+    ];
+
+    // Remove comments and get first meaningful line
+    const lines = trimmedContent.split('\n');
+    let firstMeaningfulLine = '';
+
+    for (const line of lines) {
+        const trimmedLine = line.trim();
+        if (trimmedLine && !trimmedLine.startsWith('//')) {
+            firstMeaningfulLine = trimmedLine;
+            break;
+        }
+    }
+
+    // Check if first meaningful line starts with a Z target keyword
+    for (const keyword of zTargetKeywords) {
+        if (firstMeaningfulLine.startsWith(`${keyword} `)) {
+            return true;
+        }
+    }
+
+    // Check for Z markup structural keywords anywhere in first few lines
+    const firstFewLines = lines.slice(0, 10).join(' ');
+    for (const keyword of zMarkupKeywords) {
+        if (firstFewLines.includes(keyword + ' ') || firstFewLines.includes(keyword + '{')) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 /**
@@ -329,10 +476,19 @@ export class LspDocuments {
         const document = new LspDocument(textDocument, filepath);
         this.documents.set(filepath, document);
         this._files.unshift(filepath);
+
+        // Use dynamic script kind detection for Z files
+        let scriptKind: ts.server.protocol.ScriptKindName | undefined;
+        if (textDocument.languageId === languageModeIds.z) {
+            scriptKind = getZScriptKind(document);
+        } else {
+            scriptKind = mode2ScriptKind(textDocument.languageId);
+        }
+
         this.client.executeWithoutWaitingForResponse(CommandTypes.Open, {
             file: filepath,
             fileContent: textDocument.text,
-            scriptKindName: mode2ScriptKind(textDocument.languageId),
+            scriptKindName: scriptKind,
             projectRootPath: this.getProjectRootPath(document.uri),
         });
         this.requestDiagnostic(document);

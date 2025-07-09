@@ -260,15 +260,10 @@ export class TsClient implements ITypeScriptServiceClient {
         }
 
         if (resource.scheme === fileSchemes.file) {
-            let filePath = resource.fsPath;
-            // Transform .z files to .tsx for TypeScript server compatibility
-            if (filePath.endsWith('.z')) {
-                filePath = filePath.slice(0, -2) + '.tsx';
-            }
-            return filePath;
+            return resource.fsPath;
         }
 
-        let resourcePath =
+        return (
             inMemoryResourcePrefix +
             '/' +
             resource.scheme +
@@ -278,14 +273,7 @@ export class TsClient implements ITypeScriptServiceClient {
                 ? resource.path
                 : '/' + resource.path) +
             (resource.fragment ? '#' + resource.fragment : '')
-        ;
-
-        // Transform .z files to .tsx for TypeScript server compatibility
-        if (resourcePath.endsWith('.z')) {
-            resourcePath = resourcePath.slice(0, -2) + '.tsx';
-        }
-
-        return resourcePath;
+        );
     }
 
     public toOpenDocument(
@@ -328,39 +316,17 @@ export class TsClient implements ITypeScriptServiceClient {
         if (filepath.startsWith(inMemoryResourcePrefix)) {
             const parts = filepath.match(RE_IN_MEMORY_FILEPATH);
             if (parts) {
-                const resourcePath = parts[1] +
-                    '://' +
-                    (parts[2] === emptyAuthority ? '' : parts[2]) +
-                    '/' +
-                    parts[3];
-
-                // Transform .tsx files back to .z for Z language files
-                if (resourcePath.endsWith('.tsx')) {
-                    const possibleZPath = resourcePath.slice(0, -4) + '.z';
-                    const tsFilepath = this.toTsFilePath(possibleZPath);
-                    const document = tsFilepath && this.documents.get(tsFilepath);
-                    if (document) {
-                        return document.uri;
-                    }
-                }
-
-                const resource = URI.parse(resourcePath);
+                const resource = URI.parse(
+                    parts[1] +
+                        '://' +
+                        (parts[2] === emptyAuthority ? '' : parts[2]) +
+                        '/' +
+                        parts[3],
+                );
                 const tsFilepath = this.toTsFilePath(resource.toString());
                 const document = tsFilepath && this.documents.get(tsFilepath);
                 return document ? document.uri : resource;
             }
-        }
-
-        // Transform .tsx files back to .z for Z language files
-        if (filepath.endsWith('.tsx')) {
-            // Try to find document using the .tsx path (which is how it's stored)
-            const document = this.documents.get(filepath);
-            if (document) {
-                return document.uri;
-            }
-            // If no document found, convert to .z URI
-            const possibleZPath = filepath.slice(0, -4) + '.z';
-            return URI.file(possibleZPath);
         }
 
         const fileUri = URI.file(filepath);
@@ -451,52 +417,6 @@ export class TsClient implements ITypeScriptServiceClient {
                 { pluginName, configuration },
             );
         }
-    }
-
-    /**
-     * Transform TypeScript server response to convert .tsx file paths back to .z
-     */
-    private transformResponse<T extends ts.server.protocol.Response>(response: ServerResponse.Response<T>): ServerResponse.Response<T> {
-        if (!response || typeof response !== 'object' || 'type' in response) {
-            return response;
-        }
-
-        return this.transformObject(response) as ServerResponse.Response<T>;
-    }
-
-    /**
-     * Recursively transform an object to convert .tsx file paths back to .z
-     */
-    private transformObject(obj: any): any {
-        if (obj === null || obj === undefined) {
-            return obj;
-        }
-
-        if (typeof obj === 'string') {
-            if (obj.endsWith('.tsx')) {
-                return obj.slice(0, -4) + '.z';
-            }
-            return obj;
-        }
-
-        if (Array.isArray(obj)) {
-            return obj.map(item => this.transformObject(item));
-        }
-
-        if (typeof obj === 'object') {
-            const transformed: any = {};
-            for (const [key, value] of Object.entries(obj)) {
-                // Transform file paths in common TypeScript server response fields
-                if (key === 'file' || key === 'fileName' || key === 'name') {
-                    transformed[key] = this.transformObject(value);
-                } else {
-                    transformed[key] = this.transformObject(value);
-                }
-            }
-            return transformed;
-        }
-
-        return obj;
     }
 
     start(
@@ -711,9 +631,7 @@ export class TsClient implements ITypeScriptServiceClient {
             });
         }
 
-        return executions[0]!.then((response) => {
-            return this.transformResponse(response);
-        }).catch((error) => {
+        return executions[0]!.catch((error) => {
             throw new ResponseError(1, (error as Error).message);
         });
     }
@@ -737,9 +655,7 @@ export class TsClient implements ITypeScriptServiceClient {
             isAsync: true,
             token,
             expectsResult: true,
-        })[0]!.then((response) => {
-            return this.transformResponse(response);
-        });
+        })[0]!;
     }
 
     public interruptGetErr<R>(f: () => R): R {

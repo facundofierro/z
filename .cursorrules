@@ -1,0 +1,278 @@
+# Z Programming Language Project
+
+## Project Overview
+
+Z is a revolutionary "target-first" programming language that compiles to multiple platforms (Next.js, SwiftUI, Rust, Tauri, etc.) from a single codebase. The language is built on TSX/TypeScript syntax with extensions for multi-target development, AI-optimized context, and automatic scaffolding.
+
+### Core Architecture
+
+- **Compiler**: Rust-based with PegJS grammar (`compiler/`)
+- **Language Server**: TypeScript LSP implementation (`z-language-server/`)
+- **VS Code Extension**: IDE integration (`vscode/`)
+- **Examples**: Reference implementations (`examples/`)
+- **Documentation**: Comprehensive specs and guides (`doc/`)
+
+## Key Principles
+
+### 1. Target-First Development
+
+Code is organized into explicit compilation blocks that declare their intended output:
+
+```z
+next WebApp { ... }     // → Next.js application
+swift MobileApp { ... }  // → iOS/macOS app
+rust ComputeModule { ... } // → Native Rust or WebAssembly
+```
+
+### 2. Compiler Inheritance System
+
+Child blocks inherit parent compilation context, creating cascading shared knowledge:
+
+```z
+@database(postgres)
+next ECommerceApp {
+  Schema { ... }    // Inherits TypeScript + PostgreSQL
+  Routes { ... }    // Inherits all parent context + Schema types
+}
+```
+
+### 3. AI-Optimized Context
+
+Every module/function requires `@doc` and `@context` annotations for AI assistance and semantic understanding.
+
+### 4. Zero-Config Scaffolding
+
+Automatic file generation based on registry-defined rules:
+
+- **Single-type children**: No type keywords required (`Routes { home, admin }`)
+- **Multi-type children**: Requires type keywords (`Schema { table User {...}, enum Status {...} }`)
+- **500-line limit**: Auto-splitting for maintainability
+
+## Development Guidelines
+
+### User Rules (Critical)
+
+- **Use pnpm instead of npm** - Always use `pnpm` for package management
+- **Use shadcn components and tailwind** - Prefer shadcn/ui components with Tailwind CSS
+- **Use context7 when using shadcn components** - Leverage context7 for component documentation
+- **Verify current directory** - Always check working directory before executing console commands
+
+### Code Organization
+
+#### File Structure Patterns
+
+```
+project/
+├── main.z                 # Entry point with target blocks
+├── app/routes/            # Generated Next.js routes (.route.z)
+├── app/components/        # React components (.component.z)
+├── schema/               # Database models (.table.z, .model.z, .enum.z)
+├── src/                  # Native code (Rust, Swift)
+└── out/                  # Compiled outputs per target
+```
+
+#### File Extensions & Modes
+
+- **`.z` files**: Z language source
+- **Parse modes**: `code` (TypeScript-like) vs `markup` (Z-specific syntax)
+- **Auto-detection**: Target keywords (`next`, `swift`, `rust`) trigger Z markup mode
+- **Generated files**: Use target-specific extensions (`.ts`, `.rs`, `.swift`)
+
+### Language Server Architecture
+
+#### Core Components
+
+- **`z-lsp-server.ts`**: Main LSP server extending TypeScript LSP
+- **`z-registry.ts`**: Registry-driven scaffolding configuration
+- **`scaffolding-commands.ts`**: Auto-file generation based on block structure
+- **`z-validation.ts`**: Z language syntax validation
+- **`embedded-registry.json`**: Target and namespace definitions
+
+#### Scaffolding System
+
+- **Registry-driven**: Behavior defined in `embedded-registry.json`
+- **Namespace types**: Routes, API, Components, Schema, App, etc.
+- **Child modes**: `single` (all same type) vs `multiple` (mixed types)
+- **Auto-generation**: Creates files when new children detected in parent blocks
+
+### Compiler Architecture
+
+#### Rust Workspace (`compiler/`)
+
+- **`z-ast`**: Core AST data structures (zero logic)
+- **`z-parser`**: PEG-powered parser (source → AST)
+- **`z-compiler-core`**: Semantic analysis and code generation
+- **`z-cli`**: Command-line interface
+
+#### Build Process
+
+```bash
+# Development
+cargo watch -x "run -p z-cli -- examples/hello.z"
+
+# Production
+cargo build --release -p z-cli
+```
+
+## Common Development Patterns
+
+### Compiler Development (Rust)
+
+- **Grammar changes**: Update `grammar.pegjs` → regenerate parser
+- **AST modifications**: Update `z-ast` crate first
+- **Target compilers**: Implement in `core/compilers/`
+- **Testing**: Use `cargo test --workspace`
+
+### Language Server Development (TypeScript)
+
+- **Feature additions**: Extend `ZLspServer` class
+- **Scaffolding**: Modify registry and scaffolding commands
+- **Validation**: Update `z-validation.ts` for new syntax
+- **Commands**: Add to `ZCommands` constant
+
+### Extension Development (VS Code)
+
+- **Syntax highlighting**: Update `z.tmLanguage.json`
+- **Language config**: Modify `language-configuration.json`
+- **Commands**: Integrate with language server commands
+
+## Target-Specific Knowledge
+
+### Next.js Target (`next`)
+
+- **Namespaces**: Routes, API, Components, Schema
+- **File generation**: Pages in `app/`, API routes in `app/api/`
+- **Dependencies**: React 18+, TypeScript 5+, Tailwind CSS
+- **ORM support**: Drizzle (preferred), Prisma
+
+### Swift Target (`swift`)
+
+- **Namespaces**: App, Components
+- **Framework**: SwiftUI
+- **File generation**: `.swift` files with SwiftUI structure
+
+### Rust Target (`rust`)
+
+- **Modes**: Native binary or WebAssembly
+- **Namespaces**: type, fun, mod
+- **Cargo integration**: Automatic `Cargo.toml` generation
+
+### Multi-Target Patterns
+
+- **Workspace blocks**: Organize multiple related applications
+- **Shared types**: Cross-platform type definitions
+- **Registry lookups**: Use `getNamespaceInfo()` for target-specific behavior
+
+## Registry System
+
+### Namespace Configuration
+
+```json
+{
+  "childType": "route|component|table|enum",
+  "childMode": "single|multiple",
+  "scaffolding": {
+    "fileExtension": ".route.z",
+    "parseMode": "code|markup",
+    "directoryNesting": true|false
+  }
+}
+```
+
+### Scaffolding Types
+
+- **tsx-like**: React/TSX components
+- **field-list**: Database tables/models
+- **value-list**: Enumerations
+- **class-based**: Object-oriented structures
+
+## Testing & Validation
+
+### Test Files
+
+- **Compiler tests**: `compiler/crates/*/tests/`
+- **Language server tests**: `z-language-server/src/*.test.ts`
+- **Example validation**: `examples/*.z` files
+- **Invalid syntax**: `test-invalid.z` files
+
+### Validation Patterns
+
+- **Z markup validation**: For target block files
+- **TypeScript validation**: For code-mode files
+- **Registry validation**: Ensure namespace/child type compatibility
+
+## Common Tasks & Commands
+
+### Development Workflow
+
+```bash
+# Language server development
+cd z-language-server
+pnpm install
+pnpm dev          # Watch mode
+
+# Compiler development
+cd compiler
+cargo build --release -p z-cli
+cargo test --workspace
+
+# Extension packaging
+cd vscode
+pnpm install
+pnpm package
+```
+
+### Debugging
+
+- **LSP logs**: Check language server output in VS Code
+- **Parser debugging**: Use compiler test cases
+- **Scaffolding issues**: Verify registry configuration
+
+## AI Context Integration
+
+### Required Annotations
+
+- **`@doc`**: Human-readable description
+- **`@context`**: AI-specific usage context
+- **Function params**: `@params(name: type)`
+- **Function returns**: `@response(type)`
+
+### Context Hierarchy
+
+- Module-level context flows to functions
+- Parent block context inherits to children
+- Annotations compose for rich semantic understanding
+
+## Performance Considerations
+
+### File Organization
+
+- **500-line limit**: Auto-split large files
+- **Directory nesting**: Based on namespace configuration
+- **Parse mode selection**: Optimize for content type
+
+### Build Optimization
+
+- **Incremental compilation**: Target-specific builds
+- **Template caching**: Reuse scaffolding templates
+- **Registry lookups**: Cache namespace information
+
+## Troubleshooting
+
+### Common Issues
+
+1. **Scaffolding failures**: Check registry configuration and target directories
+2. **Parse errors**: Verify Z markup vs TypeScript mode detection
+3. **Type conflicts**: Ensure proper inheritance chain
+4. **Missing dependencies**: Run appropriate package manager install
+
+### Debug Strategies
+
+- Use `z-language-server` logs for LSP issues
+- Check `embedded-registry.json` for scaffolding configuration
+- Validate grammar with `compiler/grammar.pegjs`
+- Test with minimal examples in `examples/` directory
+
+---
+
+_Z Language: "One syntax, any target - with AI whispering context into every compilation."_

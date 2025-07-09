@@ -144,7 +144,12 @@ export class SingleTsServer implements ITypeScriptServer {
     }
 
     private write(serverRequest: ts.server.protocol.Request) {
-        this._process.write(serverRequest);
+        // Transform .z file paths to .tsx before sending to TypeScript server
+        const transformedRequest = {
+            ...serverRequest,
+            arguments: transformRequestPaths(serverRequest.arguments),
+        };
+        this._process.write(transformedRequest);
     }
 
     public dispose(): void {
@@ -221,14 +226,20 @@ export class SingleTsServer implements ITypeScriptServer {
             return;
         }
 
-        this._tracer.traceResponse(this._serverId, response, callback);
-        if (response.success) {
-            callback.onSuccess(response);
-        } else if (response.message === 'No content available.') {
+        // Transform .tsx file paths back to .z for client responses
+        const transformedResponse = {
+            ...response,
+            body: transformResponsePaths(response.body),
+        };
+
+        this._tracer.traceResponse(this._serverId, transformedResponse, callback);
+        if (transformedResponse.success) {
+            callback.onSuccess(transformedResponse);
+        } else if (transformedResponse.message === 'No content available.') {
             // Special case where response itself is successful but there is not any data to return.
             callback.onSuccess(ServerResponse.NoContent);
         } else {
-            callback.onError(TypeScriptServerError.create(this._serverId, this._version, response));
+            callback.onError(TypeScriptServerError.create(this._serverId, this._version, transformedResponse));
         }
     }
 
@@ -577,4 +588,64 @@ namespace RequestState {
     }
 
     export type State = typeof Unresolved | typeof Resolved | Errored;
+}
+
+/**
+ * Transform file paths in requests from .z to .tsx for TypeScript server
+ */
+function transformRequestPaths(obj: any): any {
+    if (typeof obj === 'string') {
+        return obj.endsWith('.z') ? obj.replace(/\.z$/, '.tsx') : obj;
+    }
+
+    if (Array.isArray(obj)) {
+        return obj.map(transformRequestPaths);
+    }
+
+    if (obj && typeof obj === 'object') {
+        const transformed: any = {};
+        for (const [key, value] of Object.entries(obj)) {
+            // Common TypeScript request fields that contain file paths
+            if (key === 'file' || key === 'fileName' || key === 'scriptName' ||
+                key === 'path' || key === 'filePath' || key === 'openedFiles' ||
+                key === 'changedFiles' || key === 'closedFiles') {
+                transformed[key] = transformRequestPaths(value);
+            } else {
+                transformed[key] = transformRequestPaths(value);
+            }
+        }
+        return transformed;
+    }
+
+    return obj;
+}
+
+/**
+ * Transform file paths in responses from .tsx back to .z for client
+ */
+function transformResponsePaths(obj: any): any {
+    if (typeof obj === 'string') {
+        return obj.endsWith('.tsx') ? obj.replace(/\.tsx$/, '.z') : obj;
+    }
+
+    if (Array.isArray(obj)) {
+        return obj.map(transformResponsePaths);
+    }
+
+    if (obj && typeof obj === 'object') {
+        const transformed: any = {};
+        for (const [key, value] of Object.entries(obj)) {
+            // Common TypeScript response fields that contain file paths
+            if (key === 'file' || key === 'fileName' || key === 'scriptName' ||
+                key === 'path' || key === 'filePath' || key === 'uri' ||
+                key === 'openedFiles' || key === 'changedFiles' || key === 'closedFiles') {
+                transformed[key] = transformResponsePaths(value);
+            } else {
+                transformed[key] = transformResponsePaths(value);
+            }
+        }
+        return transformed;
+    }
+
+    return obj;
 }

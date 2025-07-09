@@ -11,6 +11,7 @@ import { validateZLanguageText } from './z-validation.js';
 import { z } from './configuration/languageIds.js';
 import { join } from 'node:path';
 import { existsSync } from 'node:fs';
+import { getNamespaceInfo } from './z-registry.js';
 import {
     ZScaffoldingService,
     scaffoldChild,
@@ -323,9 +324,217 @@ export class ZLspServer extends LspServer {
     }
 
     private async performAutoScaffolding(uri: string): Promise<void> {
-        // TODO: Implement automatic scaffolding on save
-        // This would require accessing private members or refactoring the base class
-        // For now, automatic scaffolding is disabled - use manual commands instead
-        console.log('Auto-scaffolding on save is not yet implemented for', uri);
+        try {
+            // Get document content
+            const document = await this.getDocumentText(uri);
+            if (!document) {
+                return;
+            }
+
+            // Extract parent type and potential children
+            const children = await this.extractNewChildren(document, uri);
+
+            if (children.length === 0) {
+                return;
+            }
+
+            // Get workspace root
+            const workspaceRoot = this.getWorkspaceRoot();
+            if (!workspaceRoot) {
+                return;
+            }
+
+            // Generate files for each new child
+            for (const child of children) {
+                try {
+                    await this.scaffoldingService.createChildFile({
+                        childName: child.name,
+                        childType: child.type,
+                        parentType: child.parentType,
+                        targetDirectory: child.targetDirectory,
+                        openAfterCreate: false, // Don't open automatically on save
+                    });
+                } catch (error) {
+                    // Continue with other children if one fails
+                    // Note: In production, this could be logged to the language server logger
+                }
+            }
+        } catch (error) {
+            // Note: In production, this could be logged to the language server logger
+        }
+    }
+
+    private async getDocumentText(uri: string): Promise<string | null> {
+        // Try to get from tsClient first
+        try {
+            const document = (this as any).tsClient?.toOpenDocument?.(uri);
+            if (document) {
+                return document.getText();
+            }
+        } catch {
+            // If tsClient fails, try reading from file system
+        }
+
+        // Fallback to reading from file system
+        try {
+            const fs = await import('node:fs/promises');
+            const filePath = uri.startsWith('file://') ? uri.slice(7) : uri;
+            return await fs.readFile(filePath, 'utf-8');
+        } catch {
+            return null;
+        }
+    }
+
+    private async extractNewChildren(documentText: string, _uri: string): Promise<Array<{
+        name: string;
+        type?: string;
+        parentType: string;
+        targetDirectory: string;
+    }>> {
+        const children: Array<{
+            name: string;
+            type?: string;
+            parentType: string;
+            targetDirectory: string;
+        }> = [];
+
+        const lines = documentText.split('\n');
+        let currentParentType: string | null = null;
+        let currentTargetDirectory: string | null = null;
+        let braceLevel = 0;
+
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i];
+            const trimmed = line.trim();
+
+            // Skip empty lines and comments
+            if (!trimmed || trimmed.startsWith('//')) {
+                continue;
+            }
+
+            // Track brace levels to understand nesting
+            const openBraces = (trimmed.match(/\{/g) || []).length;
+            const closeBraces = (trimmed.match(/\}/g) || []).length;
+
+            // Detect parent blocks (at the right nesting level)
+            if (braceLevel === 0 || braceLevel === 1) {
+                const parentMatch = trimmed.match(/^(\w+)\s*\{/);
+                if (parentMatch) {
+                    const parentType = parentMatch[1];
+
+                    // Check if this is a valid scaffolding parent
+                    const namespaceInfo = getNamespaceInfo(parentType);
+                    if (namespaceInfo?.scaffolding) {
+                        currentParentType = parentType;
+                        currentTargetDirectory = this.getTargetDirectory(parentType);
+                    }
+                }
+            }
+
+            // Detect child declarations within parent blocks
+            if (currentParentType && currentTargetDirectory && braceLevel === 1) {
+                // Simple child (e.g., "users" in Routes)
+                const simpleChildMatch = trimmed.match(/^([a-zA-Z][a-zA-Z0-9_]*)\s*(?:\{.*\}|\{|\s*)$/);
+                if (simpleChildMatch && !trimmed.includes('}')) {
+                    const childName = simpleChildMatch[1];
+                    if (await this.isNewChild(childName, currentParentType, currentTargetDirectory)) {
+                        children.push({
+                            name: childName,
+                            parentType: currentParentType,
+                            targetDirectory: currentTargetDirectory,
+                        });
+                    }
+                }
+
+                // Typed child (e.g., "table User" in Schema)
+                const typedChildMatch = trimmed.match(/^(\w+)\s+([a-zA-Z][a-zA-Z0-9_]*)\s*(?:\{.*\}|\{|\s*)$/);
+                if (typedChildMatch && !trimmed.includes('}')) {
+                    const childType = typedChildMatch[1];
+                    const childName = typedChildMatch[2];
+                    if (await this.isNewChild(childName, currentParentType, currentTargetDirectory, childType)) {
+                        children.push({
+                            name: childName,
+                            type: childType,
+                            parentType: currentParentType,
+                            targetDirectory: currentTargetDirectory,
+                        });
+                    }
+                }
+            }
+
+            // Update brace level
+            braceLevel += openBraces - closeBraces;
+
+            // Reset parent context when we exit parent blocks
+            if (braceLevel <= 0) {
+                currentParentType = null;
+                currentTargetDirectory = null;
+                braceLevel = 0;
+            }
+        }
+
+        return children;
+    }
+
+    private getTargetDirectory(parentType: string): string {
+        const workspaceRoot = this.getWorkspaceRoot();
+        if (!workspaceRoot) {
+            throw new Error('No workspace root');
+        }
+
+        // Use the same logic as ZScaffoldingService
+        const directoryMap: Record<string, string> = {
+            Routes: 'app/routes',
+            API: 'app/api',
+            Components: 'app/components',
+            Schema: 'schema',
+            App: 'src',
+            Frontend: 'src/frontend',
+            Backend: 'src/backend',
+            Config: 'config',
+            Activities: 'src/activities',
+            Services: 'src/services',
+            Pages: 'src/pages',
+            Windows: 'src/windows',
+            type: 'src/types',
+            fun: 'src/functions',
+            mod: 'src/modules',
+            class: 'src/classes',
+        };
+
+        const relativeDir = directoryMap[parentType] || `src/${parentType.toLowerCase()}`;
+        return join(workspaceRoot, relativeDir);
+    }
+
+    private async isNewChild(
+        childName: string,
+        parentType: string,
+        targetDirectory: string,
+        childType?: string,
+    ): Promise<boolean> {
+        const namespaceInfo = getNamespaceInfo(parentType);
+
+        if (!namespaceInfo?.scaffolding) {
+            return false;
+        }
+
+        // Determine file extension
+        let fileExtension: string;
+        if (namespaceInfo.childMode === 'single') {
+            fileExtension = namespaceInfo.scaffolding.fileExtension || '.z';
+        } else if (childType && namespaceInfo.scaffolding.fileExtensions) {
+            fileExtension = namespaceInfo.scaffolding.fileExtensions[childType] || '.z';
+        } else {
+            // For multiple types without explicit type, skip
+            return false;
+        }
+
+        const expectedFilePath = join(targetDirectory, `${childName}${fileExtension}`);
+
+        try {
+            return !existsSync(expectedFilePath);
+        } catch {
+            return true; // If we can't check, assume it's new
+        }
     }
 }
