@@ -53,9 +53,6 @@ swift MyMobileApp {
 }
 
 rust MyLibrary {
-  type { ... }
-  fun { ... }
-  mod { ... }
 }
 ```
 

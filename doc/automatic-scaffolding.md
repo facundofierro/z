@@ -543,9 +543,6 @@ swift MobileApp {
 
 ```z
 rust LibraryModule {
-  type { User, Product }
-  fun { calculateTax, formatPrice }
-  mod { auth, payments }
 }
 ```
 

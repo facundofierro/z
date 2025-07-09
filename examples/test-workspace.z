@@ -50,16 +50,6 @@ workspace ecommerce-platform {
   }
 
   rust paymentService {
-    mod payments {
-      fun processPayment() {}
-      fun validateCard() {}
-    }
-
-    type PaymentRequest {
-      amount: f64
-      currency: string
-      cardToken: string
-    }
   }
 
   tauri adminDashboard {

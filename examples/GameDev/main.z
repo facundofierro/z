@@ -1,33 +1,4 @@
 rust GameEngine {
-    type Player {
-        id: String
-        position: Vec3
-        velocity: Vec3
-        health: f32
-        inventory: Vec<Item>
-    }
-
-    type Item {
-        id: String
-        name: String
-        rarity: ItemRarity
-    }
-
-    fun update_physics() {
-        // Physics simulation
-    }
-
-    fun handle_collision() {
-        // Collision detection
-    }
-
-    mod rendering {
-        // Rendering pipeline
-    }
-
-    mod audio {
-        // Audio system
-    }
 }
 
 tauri GameEditor {
